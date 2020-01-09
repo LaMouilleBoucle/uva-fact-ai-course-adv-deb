@@ -11,7 +11,7 @@ class AdultUCI(Dataset):
         self.var_names = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
             'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income']
         self.protected_var_names = protected_vars
-        self.real_var_names = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+        self.real_var_names = ['fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
         self.data = []
         self.labels = []
         self.protected = []
@@ -20,10 +20,12 @@ class AdultUCI(Dataset):
         with open(directory, 'r') as data:
             self.data = pd.read_csv(directory, names=self.var_names)  
 
+        self.data['age'] = pd.cut(self.data['age'], 
+            bins=[0,22.5,27.5,32.5,37.5,42.5,47.5,52.5,57.5,62.5,100], 
+            labels=[18,25,30,35,40,45,50,55,60,65])
+
+
         for idx, name in enumerate(self.var_names):
-            if idx == 0:
-                data_temp = np.expand_dims(self.data[name].values, axis=1)
-                continue
             if name not in self.real_var_names:
                 temp_enc = LabelEncoder()
                 self.encoder[name] = temp_enc.fit(self.data[name])
@@ -38,10 +40,19 @@ class AdultUCI(Dataset):
                     else:
                         protected_temp = one_hot
                     continue
-                data_temp = np.append(data_temp, one_hot, axis=1)
+                if idx == 0:
+                    data_temp = one_hot
+                    continue
+                else:
+                    data_temp = np.append(data_temp, one_hot, axis=1)
             else:
-                data_temp = np.append(data_temp, np.expand_dims(self.data[name].values, axis=1), axis=1)
-        
+                if idx == 0:
+                    data_temp = np.expand_dims(self.data[name].values, axis=1)
+                    continue
+                elif name is 'fnlwgt':
+                    continue
+                else:
+                    data_temp = np.append(data_temp, np.expand_dims(self.data[name].values, axis=1), axis=1)
         self.data = torch.tensor(data_temp)
         self.protected = torch.tensor(protected_temp)
 
