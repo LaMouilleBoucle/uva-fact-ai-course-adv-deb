@@ -52,17 +52,6 @@ class AdultUCI(Dataset):
     def __getitem__(self, idx):
         return self.data[idx], self.protected[idx], self.labels[idx]
 
-
-
-# class Model(nn.Module):
-#     def __init__(self, var_dim, out_dim):
-#         super(Model, self).__init__()
-#         self.linear = nn.Linear(var_dim, out_dim, bias=True)
-#         self.softmax = nn.Softmax()
-#     def forward(self, batch):
-#         out = self.linear(batch)
-#         return self.softmax(out)
-
 if __name__ == '__main__':
 
     batch_size = 10
@@ -78,46 +67,8 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-
-
-
 #test: 16282
 #train: 32561
 #vars: 14
 #out: 1
 
-
-            
-        # to_tensor = []
-        # for ind, name in enumerate(self.var_names):
-        #     if name in self.real_var_names:
-        #         one_hot = one_hot_encode(vals, name)
-
-
-        # with open(directory, 'r') as data: 
-        #     for i, line in enumerate(data):
-        #         variables = line.replace(' ', '').replace('\n', '').split(',')
-        #         if len(variables) > 1:
-        #             self.data.append(variables[0:len(variables)-1])     
-        #             self.labels.append(variables[len(variables)-1])
-        
-        # for ind, name in enumerate(self.var_names):
-        #     if name is 'income':
-        #         self.labels = self.one_hot_encode(self.labels, name)
-        #         continue
-        #     try:
-        #         check = int(self.data[ind][0])              
-        #         data_enc = [torch.tensor(int(row[ind])) for row in self.data]
-        #     except:
-        #         data_enc = self.one_hot_encode([row[ind] for row in self.data], name)
-        # for i in range(len(self.data)):
-        #     self.data[i] = torch.flatten(data_enc)
-        # print(self.data[0])
-        
-        #self.data = tensor_data
-    # def one_hot_encode(self, vals, var_name):
-    #     set_vals = sorted(list(set(vals)))
-    #     vals = [[set_vals.index(val)] for val in vals]
-    #     one_hot_val = torch.zeros(len(self.data), len(set_vals)).scatter_(1, torch.tensor(vals), 1)
-    #     self.var_desc[var_name] = set_vals 
-    #     return one_hot_val
