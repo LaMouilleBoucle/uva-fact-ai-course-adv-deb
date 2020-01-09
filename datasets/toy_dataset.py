@@ -11,7 +11,7 @@ class ToyDataset(data.Dataset):
         self.v = np.random.randn(n_examples, 1) + self.r
         self.u = np.random.randn(n_examples, 1) + self.v
         self.w = np.random.randn(n_examples, 1) + self.v
-        self.x = torch.tensor(np.hstack([self.r, self.u]))
+        self.x = torch.tensor(np.hstack([self.r, self.u])).float()
         self.y = (torch.tensor(self.w) > 0).float() 
         self.z = torch.tensor(self.r).float()
 
