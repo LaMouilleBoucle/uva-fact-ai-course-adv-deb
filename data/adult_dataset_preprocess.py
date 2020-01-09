@@ -54,6 +54,30 @@ class AdultUCI(Dataset):
 
 
 
+# class Model(nn.Module):
+#     def __init__(self, var_dim, out_dim):
+#         super(Model, self).__init__()
+#         self.linear = nn.Linear(var_dim, out_dim, bias=True)
+#         self.softmax = nn.Softmax()
+#     def forward(self, batch):
+#         out = self.linear(batch)
+#         return self.softmax(out)
+
+if __name__ == '__main__':
+
+    batch_size = 10
+    train_data = AdultUCI('./data/adult.data', ['race', 'sex'])
+    test_data = AdultUCI('./data/adult.test', ['race', 'sex'])
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=2)
+
+    for i, (batch, protected, labels) in enumerate(train_loader):
+        print(batch.shape)
+        print(protected.shape)
+        print(labels.shape)
+        if i > 2:
+            break
+
 
 
 
