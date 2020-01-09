@@ -19,18 +19,17 @@ class AdultUCI(Dataset):
 
         with open(directory, 'r') as data:
             self.data = pd.read_csv(directory, names=self.var_names)  
+        self.process_data()
 
+    def process_data(self):
         self.data['age'] = pd.cut(self.data['age'], 
-            bins=[0,22.5,27.5,32.5,37.5,42.5,47.5,52.5,57.5,62.5,100], 
-            labels=[18,25,30,35,40,45,50,55,60,65])
+            bins=[0, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 100], 
+            labels=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65])
 
 
         for idx, name in enumerate(self.var_names):
             if name not in self.real_var_names:
-                temp_enc = LabelEncoder()
-                self.encoder[name] = temp_enc.fit(self.data[name])
-                one_hot_idx = self.encoder[name].transform(self.data[name])
-                one_hot = np.eye(len(self.encoder[name].classes_))[one_hot_idx]
+                self.encoder[name], one_hot = self.one_hot_encode(self.data[name]) 
                 if name is 'income':
                     self.labels = torch.tensor(one_hot)
                     continue
@@ -56,6 +55,12 @@ class AdultUCI(Dataset):
         self.data = torch.tensor(data_temp)
         self.protected = torch.tensor(protected_temp)
 
+    def one_hot_encode(self, data):
+        encoder = LabelEncoder().fit(data)
+        one_hot_idx = encoder.transform(data)
+        one_hot = np.eye(len(encoder.classes_))[one_hot_idx]
+
+        return encoder, one_hot
 
     def __len__(self):
         return len(self.data)
