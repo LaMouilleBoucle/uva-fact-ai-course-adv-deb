@@ -5,15 +5,11 @@ import torch
 import torch.nn as nn
 
 class Predictor(nn.Module):
-    def __init__(self, num_features, num_classes):
+    def __init__(self, num_features):
         super(Predictor, self).__init__()
 
-        if num_classes == 2:
-            self.linear_layer = nn.Linear(num_features, 1)
-            self.output_layer = nn.Sigmoid()
-        else:
-            self.linear_layer = nn.Linear(num_features, num_classes)
-            self.output_layer = nn.Softmax()
+        self.linear_layer = nn.Linear(num_features, 1)
+        self.output_layer = nn.Sigmoid()
 
     def forward(self, x):
         logits = self.linear_layer(x)

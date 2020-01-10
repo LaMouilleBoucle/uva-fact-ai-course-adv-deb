@@ -8,77 +8,67 @@ from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 
 from collections import defaultdict
-import json 
+import json
 import math
 
 from toy_dataset import ToyDataset
 
-# You may want to look into tensorboardX for logging
-from tensorboardX import SummaryWriter
+from model import Predictor
+from model import Adversary
 
+# class Predictor(nn.Module):
+#     def __init__(self, latent_dim): # latent_dim argument in order to make interpolation.py work
+#         super(Predictor, self).__init__()
+#         # Construct generator. You are free to experiment with your model,
+#         # but the following is a good start:
+#         #   Linear args.latent_dim -> 128
+#         #   LeakyReLU(0.2)
+#         #   Linear 128 -> 256
+#         #   Bnorm
+#         #   LeakyReLU(0.2)
+#         #   Linear 256 -> 512
+#         #   Bnorm
+#         #   LeakyReLU(0.2)
+#         #   Linear 512 -> 1024
+#         #   Bnorm
+#         #   LeakyReLU(0.2)
+#         #   Linear 1024 -> 768
+#         #   Output non-linearity
+#
+#         self.network_G = nn.Sequential(
+#             nn.Linear(latent_dim, 1))
+#
+#
+#
+#     def forward(self, z):
+#         # Generate images from z
+#         output = self.network_G(z)
+#
+#         logits = torch.tanh(output)
+#
+#         return output, logits
+#
+#
+# class Adversary(nn.Module):
+#     def __init__(self):
+#         super(Adversary, self).__init__()
+#
+#
+#
+#         self.network_D = nn.Sequential(
+#             nn.Linear(1, 1))
+#
+#     def forward(self, img):
+#         # return discriminator score for img
+#
+#         output = self.network_D(img)
+#         logits = torch.sigmoid(output)
+#
+#         return output, logits
 
-
-class Predictor(nn.Module):
-    def __init__(self, latent_dim): # latent_dim argument in order to make interpolation.py work 
-        super(Predictor, self).__init__()
-        # Construct generator. You are free to experiment with your model,
-        # but the following is a good start:
-        #   Linear args.latent_dim -> 128
-        #   LeakyReLU(0.2)
-        #   Linear 128 -> 256
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 256 -> 512
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 512 -> 1024
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 1024 -> 768
-        #   Output non-linearity
-
-        self.network_G = nn.Sequential(
-            nn.Linear(latent_dim, 1))
-
-
-
-    def forward(self, z):
-        # Generate images from z
-        output = self.network_G(z)
-
-        logits = torch.tanh(output)
-
-        return output, logits
-
-
-class Adversary(nn.Module):
-    def __init__(self):
-        super(Adversary, self).__init__()
-
-
-
-        self.network_D = nn.Sequential(
-            nn.Linear(1, 1))
-
-    def forward(self, img):
-        # return discriminator score for img
-
-        output = self.network_D(img)
-        logits = torch.sigmoid(output)
-
-        return output, logits 
-
-
-
-
-
-
-
-def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
+def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
-    print(torch.cuda.get_device_name(0))
-
 
     # load data
     train_dataset = ToyDataset(5)
@@ -91,21 +81,18 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
     dataloader_test = DataLoader(test_dataset, args.batch_size)
 
 
-    features_dim = dataset_train.x.shape[1]
+    features_dim = train_dataset.x.shape[1]
 
-    # Initialize models 
+    # Initialize models
     predictor = Predictor(features_dim).to(device)
-    adversary = Adversary().to(device)
+    adversary = Predictor(1).to(device)
 
     # initialize optimizers
-    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr)
-    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.lr)
-
+    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.lr, weight_decay=1e-5)
 
     criterion_P = nn.BCELoss()
     criterion_A = nn.BCELoss()
-
-
 
     step = 1
 
@@ -117,20 +104,18 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
             true_y_label = y.to(device)
             true_z_label = z.to(device)
 
+            # forward step predictior
+            pred_y_logit, pred_y_label = predictor(x_train)
+            print(pred_y_label)
 
-            # forward step predictior 
-            pred_y_label, pred_y_logit = predictor(x_train) 
-
-            # compute loss predictor 
+            # compute loss predictor
             loss_P = criterion_P(pred_y_label, true_y_label)
 
-
-
             if args.debias:
-                # forward step adverserial 
-                pred_z_label, pred_z_logit = adversary(pred_y_logit)
+                # forward step adverserial
+                pred_z_logit, pred_z_label = adversary(pred_y_label)
 
-                # compute loss adverserial 
+                # compute loss adverserial
                 loss_A = criterion_A(pred_z_label, true_z_label)
 
                 # reset gradients adversary
@@ -142,28 +127,28 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
                 # update adversary params #### NOTE: maybe move to the end
                 optimizer_A.step()
 
-                # concatenate gradients of adversary params 
+                # concatenate gradients of adversary params
                 grad_w_La  = get_grad(predictor)
 
 
-            #### UPDATE PREDICTOR ### 
+            #### UPDATE PREDICTOR ###
 
             # reset gradients
             optimizer_P.zero_grad()
 
-            # compute gradients 
+            # compute gradients
             loss_P.backward()
 
-            if args.debias: 
+            if args.debias:
 
-                # concatenate gradients of predictor params 
+                # concatenate gradients of predictor params
                 grad_w_Lp = get_grad(predictor)
 
                 proj_grad = (torch.dot(grad_w_Lp, grad_w_La) / torch.dot(grad_w_La, grad_w_La)) * grad_w_La
 
 
 
-                alpha = math.sqrt(step) 
+                alpha = math.sqrt(step)
 
                 grad_w_Lp = grad_w_Lp - proj_grad -alpha * grad_w_La
 
@@ -171,16 +156,17 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
                 replace_grad(predictor, grad_w_Lp)
 
 
+            torch.nn.utils.clip_grad_norm_(predictor.parameters(), max_norm=10)
 
             optimizer_P.step()
 
 
 
 
-            # run validation 
-            if step % args.eval_freq == 0: 
+            # run validation
+            if step % args.eval_freq == 0:
 
-                with torch.no_grad(): 
+                with torch.no_grad():
 
 
 
@@ -191,18 +177,18 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
                         true_z_label = z.to(device)
 
 
-                        # forward step predictior 
-                        pred_y_label, pred_y_logit = predictor(x_train) 
+                        # forward step predictior
+                        pred_y_label, pred_y_logit = predictor(x_train)
 
-                        # compute loss predictor 
+                        # compute loss predictor
                         loss_P_val = criterion_P(pred_y_label, true_y_label)
 
 
                         if args.debias:
-                            # forward step adverserial 
+                            # forward step adverserial
                             pred_z_label, pred_z_logit = adversary(pred_y_logit)
 
-                            # compute loss adverserial 
+                            # compute loss adverserial
                             loss_A_val = criterion_A(pred_z_label, true_z_label)
 
             step += 1
@@ -210,19 +196,19 @@ def train(dataloader, adversary, predictor, optimizer_P, optimizer_A):
 
 
 
-def get_grad(model): 
+def get_grad(model):
 
-    g = None 
+    g = None
 
     for name, param in model.named_parameters():
 
         grad = param.grad
-        if "bias" in name: 
+        if "bias" in name:
             grad = grad.unsqueeze(dim=1)
 
 
 
-        if g is None: 
+        if g is None:
             g = param.grad
         else:
             g = torch.cat((g, grad), dim=1)
@@ -230,12 +216,12 @@ def get_grad(model):
     return g.squeeze(dim=0)
 
 
-def replace_grad(model, grad): 
+def replace_grad(model, grad):
 
 
     start = 0
 
-    for name, param in model.named_parameters(): 
+    for name, param in model.named_parameters():
 
         numel = param.numel()
 
@@ -253,7 +239,7 @@ def replace_grad(model, grad):
 def main():
 
 	#
-	# NEEDS TI BE ADJUSTED!! 
+	# NEEDS TI BE ADJUSTED!!
 	######
 
     # # Create output image directory
@@ -282,9 +268,9 @@ if __name__ == "__main__":
     parser.add_argument('--eval_freq', type=int, default=500,
                         help='Frequency of evaluation on the validation set')
 
-    parser.add_argument('--print_every', type=int, default=100, 
+    parser.add_argument('--print_every', type=int, default=100,
                         help='number of iterations after which the training progress is printed')
-    parser.add_argument('--debias', type=bool, default=True, 
+    parser.add_argument('--debias', type=bool, default=True,
                         help='Use the adversial network to mitigate unwanted bias')
     args = parser.parse_args()
 
