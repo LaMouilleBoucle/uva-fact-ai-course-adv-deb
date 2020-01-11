@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import pandas as pd
@@ -17,9 +17,20 @@ class AdultUCI(Dataset):
         self.protected = []
         self.encoder = {}
 
-        with open(directory, 'r') as data:
-            self.data = pd.read_csv(directory, names=self.var_names)  
+        li = []
+        self.lengths = []
+        for dir in directory:
+            with open(dir, 'r') as data:
+                li.append(pd.read_csv(data, names=self.var_names))
+                self.lengths.append(li[-1].shape[0])
+        self.data = pd.concat(li, axis=0, ignore_index=True)
+        self.data['income'] =  self.data['income'].apply(self.clean)
+            
         self.process_data()
+    
+    def clean(self, x):
+        x = x.replace('.','')
+        return x
 
     def process_data(self):
         self.data['age'] = pd.cut(self.data['age'], 
@@ -52,6 +63,7 @@ class AdultUCI(Dataset):
                     continue
                 else:
                     data_temp = np.append(data_temp, np.expand_dims(self.data[name].values, axis=1), axis=1)
+
         self.data = torch.tensor(data_temp)
         self.protected = torch.tensor(protected_temp)
 
@@ -71,16 +83,23 @@ class AdultUCI(Dataset):
 if __name__ == '__main__':
 
     batch_size = 10
-    train_data = AdultUCI('./data/adult.data', ['race', 'sex'])
-    test_data = AdultUCI('./data/adult.test', ['race', 'sex'])
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2)
+    data = AdultUCI(['./adult.data', './adult.test'], ['race', 'sex'])
+
+    train_data, test_data = (Subset(data, range(0, data.lengths[0])), Subset(data, range(0, data.lengths[1])) )
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=2)
 
     for i, (batch, protected, labels) in enumerate(train_loader):
         print(batch.shape)
         print(protected.shape)
         print(labels.shape)
-        if i > 2:
+        if i > -1:
+            break
+    for i, (batch, protected, labels) in enumerate(test_loader):
+        print(batch.shape)
+        print(protected.shape)
+        print(labels.shape)
+        if i > -1:
             break
 
 #test: 16282
