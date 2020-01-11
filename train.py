@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from torchvision.utils import save_image
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from collections import defaultdict
 import json
@@ -13,7 +13,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from datasets.toy_dataset import ToyDataset
+from data.adult_dataset_preprocess import AdultUCI
 
 from sklearn.metrics import accuracy_score
 
@@ -23,54 +23,50 @@ from model import Adversary
 
 def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
+    print('Training of the model (on %s) has started...' %(device))
+    print('Model is being debiased: %s. \n' %(args.debias))
 
     # load data
-    train_dataset = ToyDataset(1000)
-    val_dataset = ToyDataset(1000)
-    test_dataset = ToyDataset(1000)
+    train_dataset = AdultUCI('./data/adult.data', ['sex'])
+    test_dataset = AdultUCI('./data/adult.test', ['sex'])
 
-    dataloader_train = DataLoader(train_dataset, args.batch_size)
-    dataloader_val = DataLoader(val_dataset, args.batch_size)
-    dataloader_test = DataLoader(test_dataset, args.batch_size)
+    dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=2)
+    dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True, num_workers=2)
 
-    # get feature dimension of data 
-    features_dim = train_dataset.x.shape[1]
+    # get feature dimension of data
+    features_dim = train_dataset.data.shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
-    adversary = Predictor(1).to(device)
+    adversary = Adversary().to(device)
 
     # initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters())
     optimizer_A = torch.optim.Adam(adversary.parameters())
 
-    # setup the loss function 
+    # setup the loss function
     criterion = nn.BCELoss()
-
 
     av_train_losses_P = []
     av_train_losses_A = []
-    av_val_losses_P = [] 
-    av_val_losses_A = []
+    av_test_losses_P = []
+    av_test_losses_A = []
 
     train_accuracies = []
-    val_accuracies = []
+    test_accuracies = []
 
-    # needed for alpha parameter 
+    # needed for alpha parameter
     step = 1
-    
+
     for epoch in range(args.n_epochs):
 
-
-        train_losses_P = [] 
-        train_losses_A = [] 
-        val_losses_P = [] 
-        val_losses_A = []
+        train_losses_P = []
+        train_losses_A = []
+        test_losses_P = []
+        test_losses_A = []
 
         train_predictions = []
-        val_predictions = []
-
+        test_predictions = []
 
         for i, (x, y, z) in enumerate(dataloader_train):
 
@@ -88,7 +84,6 @@ def train():
             # compute loss predictor
             loss_P = criterion(pred_y_label, true_y_label)
 
-           
             if args.debias:
                 # forward step adverserial
                 pred_z_logit, pred_z_label = adversary(pred_y_label)
@@ -106,11 +101,10 @@ def train():
                 # concatenate gradients of adversary params
                 grad_w_La = concat_grad(predictor)
 
-
-            # reset gradients 
+            # reset gradients
             optimizer_P.zero_grad()
 
-            # compute gradients predictor 
+            # compute gradients predictor
             loss_P.backward()
 
             if args.debias:
@@ -118,104 +112,100 @@ def train():
                 # concatenate gradients of predictor params
                 grad_w_Lp = concat_grad(predictor)
 
-                # project predictor gradients 
+                # project predictor gradients
                 proj_grad = (torch.dot(grad_w_Lp, grad_w_La) / torch.dot(grad_w_La, grad_w_La)) * grad_w_La
 
-                # set alpha parameter 
+                # set alpha parameter
                 alpha = math.sqrt(step)
 
-                # modify and replace the gradient of the predictor 
+                # modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)
 
-            # update predictor weights 
+            # update predictor weights
             optimizer_P.step()
-
 
         	# maybe something like this is needed to implement the stable learning of predictor
         	# during training on UCI Adult dataset
             # scheduler.step()
 
-
             if args.debias:
-                # update adversary params 
-                ####! is done here because IBM implementation does that ... 
+                # update adversary params
+                ####! is done here because IBM implementation does that ...
                 optimizer_A.step()
 
-                # store train loss of adverserial 
+                # store train loss of adverserial
                 train_losses_A.append(loss_A.item())
 
-            # store train loss and prediction of predictor    
+            # store train loss and prediction of predictor
             train_losses_P.append(loss_P.item())
             train_predictions.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
 
             step += 1
 
-
-    	# evaluate after every epoch 
+    	# evaluate after every epoch
         with torch.no_grad():
 
-            for i, (x, y, z) in enumerate(dataloader_val):
+            for i, (x, y, z) in enumerate(dataloader_test):
 
-                x_val = x.to(device)
+                x_test = x.to(device)
                 true_y_label = y.to(device)
                 true_z_label = z.to(device)
 
                 # forward step predictior
-                pred_y_logit, pred_y_label = predictor(x_val)
+                pred_y_logit, pred_y_label = predictor(x_test)
 
                 # compute loss predictor
-                loss_P_val = criterion(pred_y_label, true_y_label)
+                loss_P_test = criterion(pred_y_label, true_y_label)
 
                 if args.debias:
                     # forward step adverserial
                     pred_z_logit, pred_z_label = adversary(pred_y_logit)
 
                     # compute loss adverserial
-                    loss_A_val = criterion(pred_z_label, true_z_label)
+                    loss_A_test = criterion(pred_z_label, true_z_label)
 
-                    # store validation loss of adverserial 
-                    val_losses_A.append(loss_A_val.item())
+                    # store validation loss of adverserial
+                    test_losses_A.append(loss_A_test.item())
 
-                # store validation loss and prediction of predictor 
-                val_losses_P.append(loss_P_val.item())
-                val_predictions.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
-        
+                # store validation loss and prediction of predictor
+                test_losses_P.append(loss_P_test.item())
+                test_predictions.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
 
-        # store average losses of predictor after every epoch    
+        # store average losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
-        av_val_losses_P.append(np.mean(val_losses_P))
+        av_test_losses_P.append(np.mean(test_losses_P))
 
-        # store train and validation accuracy of predictor after every epoch 
-        train_accuracy = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions)
-        val_accuracy = accuracy_score(val_dataset.y.squeeze(dim=1).numpy(), val_predictions)
+        # store train and validation accuracy of predictor after every epoch
+        train_accuracy = accuracy_score(train_dataset.labels.squeeze(dim=1).numpy(), train_predictions)
+        test_accuracy = accuracy_score(test_dataset.labels.squeeze(dim=1).numpy(), test_predictions)
         train_accuracies.append(train_accuracy)
-        val_accuracies.append(val_accuracy)
-        
+        test_accuracies.append(test_accuracy)
 
-        if args.debias: 
-        	# store average losses of predictor after every epoch    
+        print('Epoch: %i, Test Loss: %.3f, Test Accuracy: %.3f' %(epoch, av_test_losses_P[-1], test_accuracy))
+
+        if args.debias:
+        	# store average losses of predictor after every epoch
         	av_train_losses_A.append(np.mean(train_losses_A))
-        	av_val_losses_A.append(np.mean(val_losses_A))
+        	av_test_losses_A.append(np.mean(test_losses_A))
+            #print('Test Loss of the Adversary:%.3f \n' %(av_test_losses_A[-1]))
 
-
-    # print parameters after training 
+    # print parameters after training
+    print('Done training.')
     for name, param in predictor.named_parameters():
         print('Name: {}, value: {}'.format(name, param))
-
 
     # plot accuracy and loss curves
     fig, axs = plt.subplots(3, 1)
     axs[0].plot(np.arange(1, args.n_epochs +1), av_train_losses_P, label="Train loss predictor", color="#E74C3C")
-    axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
-    
+    axs[0].plot(np.arange(1, args.n_epochs +1), av_test_losses_P, label="Val loss predictor", color="#8E44AD")
+
     axs[2].plot(np.arange(1, args.n_epochs + 1), train_accuracies, label='Train accuracy predictor', color="#229954")
-    axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies, label='Val accuracy predictor', color="#E67E22")
+    axs[2].plot(np.arange(1, args.n_epochs + 1), test_accuracies, label='Val accuracy predictor', color="#E67E22")
 
-    if args.debias: 
+    if args.debias:
     	axs[1].plot(np.arange(1, args.n_epochs +1), av_train_losses_A, label="Train loss adversary", color="#3498DB")
-    	axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
-
+    	axs[1].plot(np.arange(1, args.n_epochs +1), av_test_losses_A, label="Val loss adversary", color="#FFC300")
 
     axs[0].set_xlabel('Epochs')
     axs[0].set_ylabel('Loss')
