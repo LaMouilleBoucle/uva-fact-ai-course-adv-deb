@@ -85,7 +85,7 @@ if __name__ == '__main__':
     batch_size = 10
     data = AdultUCI(['./adult.data', './adult.test'], ['race', 'sex'])
 
-    train_data, test_data = (Subset(data, range(0, data.lengths[0])), Subset(data, range(0, data.lengths[1])) )
+    train_data, test_data = (Subset(data, range(0, data.lengths[0])), Subset(data, range(data.lengths[0], data.lengths[0]+data.lengths[1]+1)) )
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=2)
 
