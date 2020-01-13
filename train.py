@@ -273,7 +273,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print_every', type=int, default=100,
                         help='number of iterations after which the training progress is printed')
-    parser.add_argument('--debias',  default=False,
+    parser.add_argument('--debias',  action='store_true',
                         help='Use the adversial network to mitigate unwanted bias')
     args = parser.parse_args()
 
