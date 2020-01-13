@@ -41,8 +41,8 @@ def train():
     adversary = Adversary().to(device)
 
     # initialize optimizers
-    optimizer_P = torch.optim.Adam(predictor.parameters())
-    optimizer_A = torch.optim.Adam(adversary.parameters())
+    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr)
+    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.lr)
 
     # setup the loss function
     criterion = nn.BCELoss()
@@ -67,6 +67,9 @@ def train():
 
         train_predictions = []
         test_predictions = []
+
+        # Reinitializing optimizer to update the learning rate
+        optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr/step)
 
         for i, (x, y, z) in enumerate(dataloader_train):
 
@@ -259,7 +262,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--batch_size', type=int, default=20,
                         help='batch size')
-    parser.add_argument('--lr', type=float, default=0.0002,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate')
 
     parser.add_argument('--eval_freq', type=int, default=100,
