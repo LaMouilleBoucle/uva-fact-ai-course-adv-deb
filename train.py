@@ -29,27 +29,18 @@ def train():
     print('Model is being debiased: %s. \n' %(args.debias))
 
     # load data
-    # train_dataset = AdultUCI('./data/adult.data', ['sex'])
-    # test_dataset = AdultUCI('./data/adult.test', ['sex'])
 
-    # dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=2)
-    # dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True, num_workers=2)
+    data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
+    train_dataset, test_dataset = (Subset(data, range(0, data.lengths[0])),
+                             Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1])))
+    print('Train size', train_dataset.__len__())
+    print('Test size', test_dataset.__len__())
 
-
-    train_dataset = ToyDataset(1000)
-    val_dataset = ToyDataset(1000)
-    test_dataset = ToyDataset(1000)
-
-    dataloader_train = DataLoader(train_dataset, args.batch_size)
-    dataloader_val = DataLoader(val_dataset, args.batch_size)
-    dataloader_test = DataLoader(test_dataset, args.batch_size)
-
-
+    dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
 
     # get feature dimension of data
-    # features_dim = train_dataset.data.shape[1]
-
-    features_dim = train_dataset.x.shape[1]
+    features_dim = train_dataset.dataset.data.shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
@@ -108,7 +99,7 @@ def train():
 
             if args.debias:
                 # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_label)
+                pred_z_logit, pred_z_label = adversary(pred_y_label, true_y_label)
 
                 # compute loss adverserial
                 loss_A = criterion(pred_z_label, true_z_label)
@@ -186,7 +177,7 @@ def train():
 
                     if args.debias:
                         # forward step adverserial
-                        pred_z_logit, pred_z_label = adversary(pred_y_logit)
+                        pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
 
                         # compute loss adverserial
                         loss_A_val = criterion(pred_z_label, true_z_label)
@@ -359,7 +350,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print_every', type=int, default=100,
                         help='number of iterations after which the training progress is printed')
-    parser.add_argument('--debias',  action="store_true",
+    parser.add_argument('--debias',  action='store_true',
                         help='Use the adversial network to mitigate unwanted bias')
 
     parser.add_argument('--val',  action="store_true",
