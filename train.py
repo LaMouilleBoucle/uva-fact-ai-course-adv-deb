@@ -27,14 +27,17 @@ def train():
     print('Model is being debiased: %s. \n' %(args.debias))
 
     # load data
-    train_dataset = AdultUCI('./data/adult.data', ['sex'])
-    test_dataset = AdultUCI('./data/adult.test', ['sex'])
+    data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
+    train_dataset, test_dataset = (Subset(data, range(0, data.lengths[0])),
+                             Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1])))
+    print('Train size', train_dataset.__len__())
+    print('Test size', test_dataset.__len__())
 
-    dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=2)
-    dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True, num_workers=2)
+    dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
 
     # get feature dimension of data
-    features_dim = train_dataset.data.shape[1]
+    features_dim = train_dataset.dataset.data.shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)

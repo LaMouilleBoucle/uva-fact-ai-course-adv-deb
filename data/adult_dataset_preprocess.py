@@ -29,7 +29,8 @@ class AdultUCI(Dataset):
         self.process_data()
     
     def clean(self, x):
-        x = x.replace('.','')
+        if isinstance(x, str):
+            x = x.replace('.','')
         return x
 
     def process_data(self):
@@ -42,7 +43,7 @@ class AdultUCI(Dataset):
             if name not in self.real_var_names:
                 self.encoder[name], one_hot = self.one_hot_encode(self.data[name]) 
                 if name is 'income':
-                    self.labels = torch.tensor(one_hot)
+                    self.labels = torch.tensor(self.data[name] == '>50K').float()
                     continue
                 elif name in self.protected_var_names:
                     if 'protected_temp' in locals(): 
@@ -64,8 +65,8 @@ class AdultUCI(Dataset):
                 else:
                     data_temp = np.append(data_temp, np.expand_dims(self.data[name].values, axis=1), axis=1)
 
-        self.data = torch.tensor(data_temp)
-        self.protected = torch.tensor(protected_temp)
+        self.data = torch.tensor(data_temp).float()
+        self.protected = torch.tensor(protected_temp).float()
 
     def one_hot_encode(self, data):
         encoder = LabelEncoder().fit(data)
@@ -75,10 +76,10 @@ class AdultUCI(Dataset):
         return encoder, one_hot
 
     def __len__(self):
-        return len(self.data)
+        return self.data.shape[0]
 
     def __getitem__(self, idx):
-        return self.data[idx], self.protected[idx], self.labels[idx]
+        return self.data[idx], self.labels[idx], self.protected[idx]
 
 if __name__ == '__main__':
 
