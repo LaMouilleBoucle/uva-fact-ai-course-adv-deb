@@ -89,10 +89,10 @@ def train():
 
             if args.debias:
                 # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_label)
+                pred_z_logit, pred_z_label = adversary(pred_y_label, true_y_label)
 
                 # compute loss adverserial
-                loss_A = criterion(pred_z_label, true_z_label)
+                loss_A = criterion(pred_z_label, true_z_label.float())
 
                 # reset gradients adversary
                 optimizer_A.zero_grad()
@@ -163,10 +163,10 @@ def train():
 
                 if args.debias:
                     # forward step adverserial
-                    pred_z_logit, pred_z_label = adversary(pred_y_logit)
+                    pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
 
                     # compute loss adverserial
-                    loss_A_test = criterion(pred_z_label, true_z_label)
+                    loss_A_test = criterion(pred_z_label, true_z_label.float())
 
                     # store validation loss of adverserial
                     test_losses_A.append(loss_A_test.item())
@@ -270,7 +270,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--print_every', type=int, default=100,
                         help='number of iterations after which the training progress is printed')
-    parser.add_argument('--debias',  action="store_true",
+    parser.add_argument('--debias',  default=False,
                         help='Use the adversial network to mitigate unwanted bias')
     args = parser.parse_args()
 
