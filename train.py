@@ -1,14 +1,10 @@
 import argparse
-import os
+import logging
 
+import coloredlogs
 import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
-from torchvision.utils import save_image
 from torch.utils.data import DataLoader, Subset
-
-from collections import defaultdict
-import json
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,22 +18,24 @@ from sklearn.metrics import accuracy_score
 from model import Predictor
 from model import Adversary
 
+logger = logging.getLogger('Training log')
+coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 def train():
+    logger.info('Using configuration {}'.format(vars(args)))
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print('Training of the model (on %s) has started...' %(device))
-    print('Model is being debiased: %s. \n' %(args.debias))
+    logger.info('Using device {}'.format(device))
 
     # load data
-
+    logger.info('Loading the dataset')
     data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
     train_dataset, test_dataset = (Subset(data, range(0, data.lengths[0])),
                              Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1])))
-    print('Train size', train_dataset.__len__())
-    print('Test size', test_dataset.__len__())
-
     dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
     dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
+    logger.info('Finished loading the dataset')
 
     # get feature dimension of data
     features_dim = train_dataset.dataset.data.shape[1]
@@ -45,6 +43,7 @@ def train():
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
     adversary = Adversary().to(device)
+    logger.info('Initialized the predictor and the adversary')
 
     # initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr)
@@ -148,10 +147,6 @@ def train():
             # update predictor weights
             optimizer_P.step()
 
-            # maybe something like this is needed to implement the stable learning of predictor
-            # during training on UCI Adult dataset
-            # scheduler.step()
-
             if args.debias:
                 # update adversary params
                 ####! is done here because IBM implementation does that ...
@@ -171,6 +166,25 @@ def train():
 
         step += 1
 
+        # store average training losses of predictor after every epoch
+        av_train_losses_P.append(np.mean(train_losses_P))
+
+        # store train accuracy of predictor after every epoch
+        # train_accuracy = accuracy_score(train_dataset.labels.squeeze(dim=1).numpy(), train_predictions)
+        # train_accuracy_P = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions_P)
+        train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
+        logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
+                    'predictor accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P), train_accuracy_P))
+        train_accuracies_P.append(train_accuracy_P)
+
+        if args.debias:
+            av_train_losses_A.append(np.mean(train_losses_A))
+            # train_accuracy_A = accuracy_score(train_dataset.z.squeeze(dim=1).numpy(), train_predictions_A)
+            train_accuracy_A = accuracy_score(protected_train['true'], protected_train['pred'])
+            logger.info('Epoch {}/{}: adversary loss [train] = {:.3f}, '
+                        'adversary accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_A),
+                                                                     train_accuracy_A))
+            train_accuracies_A.append(train_accuracy_A)
 
         if args.val: 
 
@@ -219,6 +233,8 @@ def train():
             # val_accuracy = accuracy_score(val_dataset.labels.squeeze(dim=1).numpy(), val_predictions)
             # val_accuracy_P = accuracy_score(val_dataset.y.squeeze(dim=1).numpy(), val_predictions_P)
             val_accuracy_P = accuracy_score(labels_val['true'], labels_val['pred'])
+            logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
+                        'predictor accuracy [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P), val_accuracy_P))
             val_accuracies_P.append(val_accuracy_P)
 
 
@@ -226,42 +242,27 @@ def train():
                 av_val_losses_A.append(np.mean(val_losses_A))
                 # val_accuracy_A = accuracy_score(val_dataset.z.squeeze(dim=1).numpy(), val_predictions_A)
                 val_accuracy_A = accuracy_score(protected_val['true'], protected_val['pred'])
+                logger.info('Epoch {}/{}: adversary loss [val] = {:.3f}, '
+                            'adversary accuracy [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_A),
+                                                                       val_accuracy_A))
                 val_accuracies_A.append(val_accuracy_A)
-                # print('Val Loss of the Adversary:%.3f \n' %(av_val_losses_A[-1]))
 
-
-        # store average training losses of predictor after every epoch
-        av_train_losses_P.append(np.mean(train_losses_P))
-        
-
-        # store train accuracy of predictor after every epoch
-        # train_accuracy = accuracy_score(train_dataset.labels.squeeze(dim=1).numpy(), train_predictions)
-        # train_accuracy_P = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions_P)
-        train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
-        train_accuracies_P.append(train_accuracy_P)
-
-        # print('Epoch: %i, Val Loss: %.3f, Val Accuracy: %.3f' %(epoch, av_val_losses_P[-1], val_accuracy))
-
-        if args.debias:
-            av_train_losses_A.append(np.mean(train_losses_A))
-            # train_accuracy_A = accuracy_score(train_dataset.z.squeeze(dim=1).numpy(), train_predictions_A)
-            train_accuracy_A = accuracy_score(protected_train['true'], protected_train['pred'])
-            train_accuracies_A.append(train_accuracy_A)
-
-                
+        # maybe something like this is needed to implement the stable learning of predictor
+        # during training on UCI Adult dataset
+        scheduler.step()
 
     # print parameters after training
-    print('Done training.')
+    logger.info('Finished training')
+
+    # Print the model parameters
+    logger.info('Learned model parameters: ')
     for name, param in predictor.named_parameters():
-        print('Name: {}, value: {}'.format(name, param))
-
-
+        logger.info('Name: {}, value: {}'.format(name, param))
 
     test_predictions_P = [] 
     test_predictions_A = [] 
     labels_test = {'true': [], 'pred': []}
     protected_test = {'true': [], 'pred': []}
-
 
     # run the model on the test set after training 
     with torch.no_grad():
@@ -286,21 +287,20 @@ def train():
                 test_predictions_A.extend(protecteds)
                 protected_test['pred'].extend(protecteds)
 
-
             #store predictions of predictor and adversary
             preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
             test_predictions_P.extend(preds)
             labels_test['pred'].extend(preds)
 
     test_accuracy_P = accuracy_score(labels_test['pred'], labels_test['true'])
-    print("test P: ", test_accuracy_P)
+    logger.info('Predictor accuracy [test] = {}'.format(test_accuracy_P))
 
     if args.debias:
         test_accuracy_A = accuracy_score(protected_test['pred'], protected_test['true'])
-        print("test A: ", test_accuracy_A)
-
+        logger.info('Accuracy accuracy [test] = {}'.format(test_accuracy_A))
 
     # plot accuracy and loss curves
+    logger.info('Generating plots')
     fig, axs = plt.subplots(4, 1)
     axs[0].plot(np.arange(1, args.n_epochs +1), av_train_losses_P, label="Train loss predictor", color="#E74C3C")
     axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
@@ -314,9 +314,6 @@ def train():
 
         axs[3].plot(np.arange(1, args.n_epochs + 1), train_accuracies_A, label='Train accuracy adversary', color="#229954")
         axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
-
-
-
 
     axs[0].set_xlabel('Epochs')
     axs[0].set_ylabel('Loss')
@@ -337,7 +334,6 @@ def train():
     plt.tight_layout()
 
     plt.show()
-
 
 
 def concat_grad(model):
@@ -365,31 +361,24 @@ def replace_grad(model, grad):
         param.grad.data = grad[start:start + numel].expand_as(param.grad)
         start += numel
 
-    return
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--n_epochs', type=int, default=100,
                         help='number of epochs')
-
     parser.add_argument('--batch_size', type=int, default=20,
                         help='batch size')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate')
-
     parser.add_argument('--eval_freq', type=int, default=100,
                         help='Frequency of evaluation on the validation set')
-
     parser.add_argument('--print_every', type=int, default=100,
                         help='number of iterations after which the training progress is printed')
     parser.add_argument('--debias',  action='store_true',
                         help='Use the adversial network to mitigate unwanted bias')
-
     parser.add_argument('--val',  action="store_true",
                         help='Use a validation set during training')
 
     args = parser.parse_args()
-
 
     train()
