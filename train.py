@@ -58,6 +58,7 @@ def train():
     av_val_losses_P = []
     av_val_losses_A = []
 
+
     train_accuracies_P = []
     train_accuracies_A = []
     val_accuracies_P = []
@@ -72,6 +73,12 @@ def train():
         train_losses_A = []
         val_losses_P = []
         val_losses_A = []
+        
+        labels_train = {'true': [], 'pred': []}
+        labels_val = {'true': [], 'pred': []}
+
+        protected_train = {'true': [], 'pred': []}
+        protected_val = {'true': [], 'pred': []}
 
         train_predictions_P = []
         train_predictions_A = []
@@ -89,7 +96,10 @@ def train():
 
             x_train = x.to(device)
             true_y_label = y.to(device)
+            labels_train['true'].extend(true_y_label)
+
             true_z_label = z.to(device)
+            protected_train['true'].extend(true_z_label)
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_train)
@@ -149,11 +159,15 @@ def train():
 
                 # store train loss and prediction of adverserial
                 train_losses_A.append(loss_A.item())
-                train_predictions_A.extend((pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+                protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+                train_predictions_A.extend(protecteds)
+                protected_train['pred'].extend(protecteds)
 
             # store train loss and prediction of predictor
             train_losses_P.append(loss_P.item())
-            train_predictions_P.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+            preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+            train_predictions_P.extend(preds)
+            labels_train['pred'].extend(preds)
 
             step += 1
 
@@ -167,7 +181,9 @@ def train():
 
                     x_val = x.to(device)
                     true_y_label = y.to(device)
+                    labels_val['true'].extend(true_y_label)
                     true_z_label = z.to(device)
+                    protected_val['true'].extend(true_z_label)
 
                     # forward step predictior
                     pred_y_logit, pred_y_label = predictor(x_val)
@@ -184,11 +200,15 @@ def train():
 
                         # store validation loss of adverserial
                         val_losses_A.append(loss_A_val.item())
-                        val_predictions_A.extend((pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+                        protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+                        val_predictions_A.extend(protecteds)
+                        protected_val['pred'].extend(protecteds)
 
                     # store validation loss and prediction of predictor
                     val_losses_P.append(loss_P_val.item())
-                    val_predictions_P.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+                    preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()                    
+                    val_predictions_P.extend(preds)
+                    labels_val['pred'].extend(preds)
 
 
             # store average validation losses of predictor after every epoch
@@ -197,13 +217,15 @@ def train():
 
             # store train accuracy of predictor after every epoch
             # val_accuracy = accuracy_score(val_dataset.labels.squeeze(dim=1).numpy(), val_predictions)
-            val_accuracy_P = accuracy_score(val_dataset.y.squeeze(dim=1).numpy(), val_predictions_P)
+            # val_accuracy_P = accuracy_score(val_dataset.y.squeeze(dim=1).numpy(), val_predictions_P)
+            val_accuracy_P = accuracy_score(labels_val['true'], labels_val['pred'])
             val_accuracies_P.append(val_accuracy_P)
 
 
             if args.debias: 
                 av_val_losses_A.append(np.mean(val_losses_A))
-                val_accuracy_A = accuracy_score(val_dataset.z.squeeze(dim=1).numpy(), val_predictions_A)
+                # val_accuracy_A = accuracy_score(val_dataset.z.squeeze(dim=1).numpy(), val_predictions_A)
+                val_accuracy_A = accuracy_score(protected_val['true'], protected_val['pred'])
                 val_accuracies_A.append(val_accuracy_A)
                 # print('Val Loss of the Adversary:%.3f \n' %(av_val_losses_A[-1]))
 
@@ -214,14 +236,16 @@ def train():
 
         # store train accuracy of predictor after every epoch
         # train_accuracy = accuracy_score(train_dataset.labels.squeeze(dim=1).numpy(), train_predictions)
-        train_accuracy_P = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions_P)
+        # train_accuracy_P = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions_P)
+        train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
         train_accuracies_P.append(train_accuracy_P)
 
         # print('Epoch: %i, Val Loss: %.3f, Val Accuracy: %.3f' %(epoch, av_val_losses_P[-1], val_accuracy))
 
         if args.debias:
             av_train_losses_A.append(np.mean(train_losses_A))
-            train_accuracy_A = accuracy_score(train_dataset.z.squeeze(dim=1).numpy(), train_predictions_A)
+            # train_accuracy_A = accuracy_score(train_dataset.z.squeeze(dim=1).numpy(), train_predictions_A)
+            train_accuracy_A = accuracy_score(protected_train['true'], protected_train['pred'])
             train_accuracies_A.append(train_accuracy_A)
 
                 
@@ -235,6 +259,8 @@ def train():
 
     test_predictions_P = [] 
     test_predictions_A = [] 
+    labels_test = {'true': [], 'pred': []}
+    protected_test = {'true': [], 'pred': []}
 
 
     # run the model on the test set after training 
@@ -244,7 +270,9 @@ def train():
 
             x_test = x.to(device)
             true_y_label = y.to(device)
+            labels_test['true'].extend(true_y_label)
             true_z_label = z.to(device)
+            protected_test['true'].extend(true_z_label)
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_test)
@@ -254,16 +282,21 @@ def train():
                 pred_z_logit, pred_z_label = adversary(pred_y_logit)
 
                 # store predictions of predictor and adversary
-                test_predictions_A.extend((pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+                protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+                test_predictions_A.extend(protecteds)
+                protected_test['pred'].extend(protecteds)
+
 
             #store predictions of predictor and adversary
-            test_predictions_P.extend((pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist())
+            preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+            test_predictions_P.extend(preds)
+            labels_test['pred'].extend(preds)
 
-    test_accuracy_P = accuracy_score(test_dataset.y.squeeze(dim=1).numpy(), test_predictions_P)
+    test_accuracy_P = accuracy_score(labels_test['pred'], labels_test['true'])
     print("test P: ", test_accuracy_P)
 
     if args.debias:
-        test_accuracy_A = accuracy_score(test_dataset.z.squeeze(dim=1).numpy(), test_predictions_A)
+        test_accuracy_A = accuracy_score(protected_test['pred'], protected_test['true'])
         print("test A: ", test_accuracy_A)
 
 
