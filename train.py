@@ -72,7 +72,7 @@ def train():
         train_losses_A = []
         val_losses_P = []
         val_losses_A = []
-        
+
         labels_train = {'true': [], 'pred': []}
         labels_val = {'true': [], 'pred': []}
 
@@ -96,9 +96,11 @@ def train():
             x_train = x.to(device)
             true_y_label = y.to(device)
             labels_train['true'].extend(true_y_label.cpu().numpy().tolist())
+            true_y_label.unsqueeze_(dim=1)
 
             true_z_label = z.to(device)
-            protected_train['true'].extend(true_z_label.cpu().numpy().tolist())
+            protected_train['true'].extend(true_z_label.argmax(dim=1).cpu().numpy().tolist())
+            true_z_label.unsqueeze_(dim=2)
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_train)
@@ -111,7 +113,7 @@ def train():
                 pred_z_logit, pred_z_label = adversary(pred_y_label, true_y_label)
 
                 # compute loss adverserial
-                loss_A = criterion(pred_z_label, true_z_label)
+                loss_A = criterion(pred_z_label, true_z_label.argmax(dim=1).float())
 
                 # reset gradients adversary
                 optimizer_A.zero_grad()
@@ -140,9 +142,15 @@ def train():
                 # set alpha parameter
                 alpha = math.sqrt(step)
 
+                # print(grad_w_Lp.norm())
+                # print(proj_grad.norm())
+                # print(grad_w_La.norm())
                 # modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)
+                # print(grad_w_Lp.norm())
+                # print('')
+
 
             # update predictor weights
             optimizer_P.step()
@@ -154,7 +162,7 @@ def train():
 
                 # store train loss and prediction of adverserial
                 train_losses_A.append(loss_A.item())
-                protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+                protecteds = (pred_z_label > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
                 train_predictions_A.extend(protecteds)
                 protected_train['pred'].extend(protecteds)
 
@@ -186,7 +194,7 @@ def train():
                                                                      train_accuracy_A))
             train_accuracies_A.append(train_accuracy_A)
 
-        if args.val: 
+        if args.val:
 
             # evaluate after every epoch
             with torch.no_grad():
@@ -220,7 +228,7 @@ def train():
 
                     # store validation loss and prediction of predictor
                     val_losses_P.append(loss_P_val.item())
-                    preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()                    
+                    preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
                     val_predictions_P.extend(preds)
                     labels_val['pred'].extend(preds)
 
@@ -238,7 +246,7 @@ def train():
             val_accuracies_P.append(val_accuracy_P)
 
 
-            if args.debias: 
+            if args.debias:
                 av_val_losses_A.append(np.mean(val_losses_A))
                 # val_accuracy_A = accuracy_score(val_dataset.z.squeeze(dim=1).numpy(), val_predictions_A)
                 val_accuracy_A = accuracy_score(protected_val['true'], protected_val['pred'])
@@ -259,14 +267,14 @@ def train():
     for name, param in predictor.named_parameters():
         logger.info('Name: {}, value: {}'.format(name, param))
 
-    test_predictions_P = [] 
-    test_predictions_A = [] 
+    test_predictions_P = []
+    test_predictions_A = []
     labels_test = {'true': [], 'pred': []}
     protected_test = {'true': [], 'pred': []}
 
-    # run the model on the test set after training 
+    # run the model on the test set after training
     with torch.no_grad():
-    
+
         for i, (x, y, z) in enumerate(dataloader_test):
 
             x_test = x.to(device)
