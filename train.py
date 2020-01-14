@@ -279,19 +279,20 @@ def train():
 
             x_test = x.to(device)
             true_y_label = y.to(device)
+            true_y_label.unsqueeze_(dim=1)
             labels_test['true'].extend(true_y_label.cpu().numpy().tolist())
             true_z_label = z.to(device)
-            protected_test['true'].extend(true_z_label.cpu().numpy().tolist())
+            protected_test['true'].extend(true_z_label.argmax(dim=1).cpu().numpy().tolist())
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_test)
 
             if args.debias:
                 # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_logit)
+                pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
 
                 # store predictions of predictor and adversary
-                protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+                protecteds = (pred_z_label > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
                 test_predictions_A.extend(protecteds)
                 protected_test['pred'].extend(protecteds)
 
@@ -311,17 +312,17 @@ def train():
     logger.info('Generating plots')
     fig, axs = plt.subplots(4, 1)
     axs[0].plot(np.arange(1, args.n_epochs +1), av_train_losses_P, label="Train loss predictor", color="#E74C3C")
-    axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
+    #axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
 
     axs[2].plot(np.arange(1, args.n_epochs + 1), train_accuracies_P, label='Train accuracy predictor', color="#229954")
-    axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies_P, label='Val accuracy predictor', color="#E67E22")
+    #axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies_P, label='Val accuracy predictor', color="#E67E22")
 
     if args.debias:
         axs[1].plot(np.arange(1, args.n_epochs +1), av_train_losses_A, label="Train loss adversary", color="#3498DB")
-        axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
+        #axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
 
         axs[3].plot(np.arange(1, args.n_epochs + 1), train_accuracies_A, label='Train accuracy adversary', color="#229954")
-        axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
+        #axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
 
     axs[0].set_xlabel('Epochs')
     axs[0].set_ylabel('Loss')
