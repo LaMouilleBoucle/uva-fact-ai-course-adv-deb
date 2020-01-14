@@ -44,7 +44,7 @@ def train():
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
-    adversary = Predictor(1).to(device)
+    adversary = Adversary().to(device)
 
     # initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr)
@@ -96,10 +96,10 @@ def train():
 
             x_train = x.to(device)
             true_y_label = y.to(device)
-            labels_train['true'].extend(true_y_label)
+            labels_train['true'].extend(true_y_label.cpu().numpy().tolist())
 
             true_z_label = z.to(device)
-            protected_train['true'].extend(true_z_label)
+            protected_train['true'].extend(true_z_label.cpu().numpy().tolist())
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_train)
@@ -181,9 +181,9 @@ def train():
 
                     x_val = x.to(device)
                     true_y_label = y.to(device)
-                    labels_val['true'].extend(true_y_label)
+                    labels_val['true'].extend(true_y_label.cpu().numpy().tolist())
                     true_z_label = z.to(device)
-                    protected_val['true'].extend(true_z_label)
+                    protected_val['true'].extend(true_z_label.cpu().numpy().tolist())
 
                     # forward step predictior
                     pred_y_logit, pred_y_label = predictor(x_val)
@@ -270,9 +270,9 @@ def train():
 
             x_test = x.to(device)
             true_y_label = y.to(device)
-            labels_test['true'].extend(true_y_label)
+            labels_test['true'].extend(true_y_label.cpu().numpy().tolist())
             true_z_label = z.to(device)
-            protected_test['true'].extend(true_z_label)
+            protected_test['true'].extend(true_z_label.cpu().numpy().tolist())
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_test)
