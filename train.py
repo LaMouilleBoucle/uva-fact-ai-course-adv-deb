@@ -86,7 +86,7 @@ def train():
         val_predictions_A = []
 
         # Reinitializing optimizer to update the learning rate
-        # optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr/step)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
 
         for i, (x, y, z) in enumerate(dataloader_train):
 
@@ -169,7 +169,7 @@ def train():
             train_predictions_P.extend(preds)
             labels_train['pred'].extend(preds)
 
-            step += 1
+        step += 1
 
 
         if args.val: 
