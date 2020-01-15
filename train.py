@@ -23,6 +23,13 @@ from model import Adversary
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+
+def stepper(x):
+    stepper.step_count += 1
+    print('step', stepper.step_count)
+    return x * stepper.step_count
+
+
 def train():
     logger.info('Using configuration {}'.format(vars(args)))
 
@@ -71,7 +78,8 @@ def train():
     val_accuracies_A = []
 
     # needed for alpha parameter
-    step = 1
+    stepper.step_count = 1
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, stepper)
 
     for epoch in range(args.n_epochs):
 
@@ -147,7 +155,7 @@ def train():
                 proj_grad = utils.project_grad(grad_w_Lp, grad_w_La)
 
                 # set alpha parameter
-                alpha = math.sqrt(step)
+                alpha = math.sqrt(stepper.step_count)
 
                 # print(grad_w_Lp.norm())
                 # print(proj_grad.norm())
@@ -161,6 +169,7 @@ def train():
 
             # update predictor weights
             optimizer_P.step()
+            scheduler.step()
 
             if args.debias:
                 # update adversary params
@@ -178,8 +187,6 @@ def train():
             preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
             train_predictions_P.extend(preds)
             labels_train['pred'].extend(preds)
-
-        step += 1
 
         # store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
