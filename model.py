@@ -30,6 +30,6 @@ class Adversary(nn.Module):
 
     def forward(self, logits, targets):
         s = torch.sigmoid((1 + torch.abs(self.c)) * logits)
-        z_hat = (torch.cat((s, s*targets, s*(1-targets)),dim=1) @ self.w2 + self.b)
+        z_hat = torch.cat((s, s*targets, s*(1-targets)),dim=1) @ self.w2 + self.b
 
         return z_hat, torch.sigmoid(z_hat)

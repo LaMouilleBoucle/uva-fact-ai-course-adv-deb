@@ -14,13 +14,13 @@ from data.adult_dataset_preprocess import AdultUCI
 from datasets.toy_dataset import ToyDataset
 
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import MaxAbsScaler
 
 from model import Predictor
 from model import Adversary
 
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 
 def train():
     logger.info('Using configuration {}'.format(vars(args)))
@@ -31,8 +31,14 @@ def train():
     # load data
     logger.info('Loading the dataset')
     data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
-    train_dataset, test_dataset = (Subset(data, range(0, data.lengths[0])),
-                             Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1])))
+    train_dataset = Subset(data, range(0, data.lengths[0]))
+    test_dataset = Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1]))
+
+    # Scale each feature by its maximum absolute value
+    min_max_scaler = MaxAbsScaler()
+    train_dataset.dataset.data = torch.tensor(min_max_scaler.fit_transform(train_dataset.dataset.data.numpy()))
+    test_dataset.dataset.data = torch.tensor(min_max_scaler.transform(test_dataset.dataset.data.numpy()))
+
     dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
     dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
     logger.info('Finished loading the dataset')
@@ -350,6 +356,7 @@ def concat_grad(model):
     g = None
 
     for name, param in model.named_parameters():
+
         grad = param.grad
         if "bias" in name:
             grad = grad.unsqueeze(dim=1)
