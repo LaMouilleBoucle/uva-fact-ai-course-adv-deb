@@ -18,7 +18,6 @@ class Predictor(nn.Module):
 
         return logits, predictions
 
-
 class Adversary(nn.Module):
     def __init__(self):
         super(Adversary, self).__init__()

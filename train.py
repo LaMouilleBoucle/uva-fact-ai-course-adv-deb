@@ -91,7 +91,7 @@ def train():
         val_predictions_A = []
 
         # Reinitializing optimizer to update the learning rate
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
+        # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
 
         for i, (x, y, z) in enumerate(dataloader_train):
 
@@ -143,7 +143,7 @@ def train():
                 grad_w_Lp = concat_grad(predictor)
 
                 # project predictor gradients
-                proj_grad = (torch.dot(grad_w_Lp, grad_w_La) / torch.dot(grad_w_La, grad_w_La)) * grad_w_La
+                proj_grad = (torch.dot(grad_w_Lp, grad_w_La) / (torch.dot(grad_w_La, grad_w_La)+torch.finfo(torch.float32).tiny)) * grad_w_La
 
                 # set alpha parameter
                 alpha = math.sqrt(step)
@@ -263,7 +263,7 @@ def train():
 
         # maybe something like this is needed to implement the stable learning of predictor
         # during training on UCI Adult dataset
-        scheduler.step()
+        # scheduler.step()
 
     # print parameters after training
     logger.info('Finished training')
@@ -307,6 +307,7 @@ def train():
             test_predictions_P.extend(preds)
             labels_test['pred'].extend(preds)
 
+    #print('Percentage Male/Female: %f' %(np.sum(labels_test['true'])/len(labels_test['true'])))
     test_accuracy_P = accuracy_score(labels_test['pred'], labels_test['true'])
     logger.info('Predictor accuracy [test] = {}'.format(test_accuracy_P))
 
