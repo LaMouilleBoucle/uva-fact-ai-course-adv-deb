@@ -30,11 +30,28 @@ def project_grad(x, v):
     return proj_grad
 
 
-def generate_confusion_matrix(true_labels, predictions, true_protected):
+def calculate_fpr(fp, tn):
+    return fp / (fp + tn)
+
+
+def calculate_fnr(fn, tp):
+    return fn / (fn + tp)
+
+
+def calculate_metrics(true_labels, predictions, true_protected):
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
+
     negative_indices = np.where(np.array(true_protected) == 0)[0]
     neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
+    tn, fp, fn, tp = neg_confusion_mat.ravel()
+    neg_fpr = calculate_fpr(fp, tn)
+    neg_fnr = calculate_fnr(fn, tp)
+
     positive_indices = np.where(np.array(true_protected) == 1)[0]
     pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
-    return neg_confusion_mat, pos_confusion_mat
+    tn, fp, fn, tp = pos_confusion_mat.ravel()
+    pos_fpr = calculate_fpr(fp, tn)
+    pos_fnr = calculate_fnr(fn, tp)
+
+    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr

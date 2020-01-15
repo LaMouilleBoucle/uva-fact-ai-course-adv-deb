@@ -15,13 +15,13 @@ from data.adult_dataset_preprocess import AdultUCI
 from datasets.toy_dataset import ToyDataset
 
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import MaxAbsScaler
 
 from model import Predictor
 from model import Adversary
 
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 
 def train():
     logger.info('Using configuration {}'.format(vars(args)))
@@ -32,8 +32,14 @@ def train():
     # load data
     logger.info('Loading the dataset')
     data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
-    train_dataset, test_dataset = (Subset(data, range(0, data.lengths[0])),
-                             Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1])))
+    train_dataset = Subset(data, range(0, data.lengths[0]))
+    test_dataset = Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1]))
+
+    # Scale each feature by its maximum absolute value
+    min_max_scaler = MaxAbsScaler()
+    train_dataset.dataset.data = torch.tensor(min_max_scaler.fit_transform(train_dataset.dataset.data.numpy()))
+    test_dataset.dataset.data = torch.tensor(min_max_scaler.transform(test_dataset.dataset.data.numpy()))
+
     dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
     dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
     logger.info('Finished loading the dataset')
@@ -86,7 +92,7 @@ def train():
         val_predictions_A = []
 
         # Reinitializing optimizer to update the learning rate
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
+        # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
 
         for i, (x, y, z) in enumerate(dataloader_train):
 
@@ -256,7 +262,7 @@ def train():
 
         # maybe something like this is needed to implement the stable learning of predictor
         # during training on UCI Adult dataset
-        scheduler.step()
+        # scheduler.step()
 
     # print parameters after training
     logger.info('Finished training')
@@ -307,9 +313,11 @@ def train():
         test_accuracy_A = accuracy_score(protected_test['true'], protected_test['pred'])
         logger.info('Adversary accuracy [test] = {}'.format(test_accuracy_A))
 
-    neg_confusion_matrix, pos_confusion_matrix = utils.generate_confusion_matrix(labels_test['true'], labels_test['pred'], protected_test['true'])
-    logger.info('Confusion matrix for the negative label: {}'.format(neg_confusion_matrix))
-    logger.info('Confusion matrix for the positive label: {}'.format(pos_confusion_matrix))
+    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(labels_test['true'], labels_test['pred'], protected_test['true'])
+    logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
+    logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
+    logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
+    logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
 
     # plot accuracy and loss curves
     logger.info('Generating plots')
