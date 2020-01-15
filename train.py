@@ -24,10 +24,10 @@ logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
-def stepper(x):
-    stepper.step_count += 1
-    print('step', stepper.step_count)
-    return x * stepper.step_count
+def decayer(lr):
+    new_lr = lr / decayer.step_count
+    decayer.step_count += 1
+    return new_lr
 
 
 def train():
@@ -77,9 +77,9 @@ def train():
     val_accuracies_P = []
     val_accuracies_A = []
 
-    # needed for alpha parameter
-    stepper.step_count = 1
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, stepper)
+    # Learning rate decay
+    decayer.step_count = 1
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, decayer)
 
     for epoch in range(args.n_epochs):
 
@@ -155,28 +155,24 @@ def train():
                 proj_grad = utils.project_grad(grad_w_Lp, grad_w_La)
 
                 # set alpha parameter
-                alpha = math.sqrt(stepper.step_count)
+                alpha = math.sqrt(decayer.step_count)
 
-                # print(grad_w_Lp.norm())
-                # print(proj_grad.norm())
-                # print(grad_w_La.norm())
                 # modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 utils.replace_grad(predictor, grad_w_Lp)
-                # print(grad_w_Lp.norm())
-                # print('')
 
 
             # update predictor weights
             optimizer_P.step()
-            scheduler.step()
 
             if args.debias:
-                # update adversary params
-                ####! is done here because IBM implementation does that ...
+                # Decay the learning rate
+                scheduler.step()
+
+                # Update adversary params
                 optimizer_A.step()
 
-                # store train loss and prediction of adverserial
+                # store train loss and prediction of the adversery
                 train_losses_A.append(loss_A.item())
                 protecteds = (pred_z_label > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
                 train_predictions_A.extend(protecteds)
@@ -267,10 +263,6 @@ def train():
                                                                        val_accuracy_A))
                 val_accuracies_A.append(val_accuracy_A)
 
-        # maybe something like this is needed to implement the stable learning of predictor
-        # during training on UCI Adult dataset
-        # scheduler.step()
-
     # print parameters after training
     logger.info('Finished training')
 
@@ -329,6 +321,7 @@ def train():
     # plot accuracy and loss curves
     logger.info('Generating plots')
     utils.plot_loss_acc((av_train_losses_P,train_accuracies_P), (av_train_losses_A,train_accuracies_A))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
