@@ -9,6 +9,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+import utils
 from data.adult_dataset_preprocess import AdultUCI
 
 from datasets.toy_dataset import ToyDataset
@@ -123,7 +124,7 @@ def train():
                 loss_A.backward(retain_graph=True)
 
                 # concatenate gradients of adversary params
-                grad_w_La = concat_grad(predictor)
+                grad_w_La = utils.concat_grad(predictor)
 
             # reset gradients
             optimizer_P.zero_grad()
@@ -134,10 +135,10 @@ def train():
             if args.debias:
 
                 # concatenate gradients of predictor params
-                grad_w_Lp = concat_grad(predictor)
+                grad_w_Lp = utils.concat_grad(predictor)
 
                 # project predictor gradients
-                proj_grad = (torch.dot(grad_w_Lp, grad_w_La) / torch.dot(grad_w_La, grad_w_La)) * grad_w_La
+                proj_grad = utils.project_grad(grad_w_Lp, grad_w_La)
 
                 # set alpha parameter
                 alpha = math.sqrt(step)
@@ -147,7 +148,7 @@ def train():
                 # print(grad_w_La.norm())
                 # modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
-                replace_grad(predictor, grad_w_Lp)
+                utils.replace_grad(predictor, grad_w_Lp)
                 # print(grad_w_Lp.norm())
                 # print('')
 
@@ -178,8 +179,6 @@ def train():
         av_train_losses_P.append(np.mean(train_losses_P))
 
         # store train accuracy of predictor after every epoch
-        # train_accuracy = accuracy_score(train_dataset.labels.squeeze(dim=1).numpy(), train_predictions)
-        # train_accuracy_P = accuracy_score(train_dataset.y.squeeze(dim=1).numpy(), train_predictions_P)
         train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
         logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
                     'predictor accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P), train_accuracy_P))
@@ -301,12 +300,16 @@ def train():
             test_predictions_P.extend(preds)
             labels_test['pred'].extend(preds)
 
-    test_accuracy_P = accuracy_score(labels_test['pred'], labels_test['true'])
+    test_accuracy_P = accuracy_score(labels_test['true'], labels_test['pred'])
     logger.info('Predictor accuracy [test] = {}'.format(test_accuracy_P))
 
     if args.debias:
-        test_accuracy_A = accuracy_score(protected_test['pred'], protected_test['true'])
-        logger.info('Accuracy accuracy [test] = {}'.format(test_accuracy_A))
+        test_accuracy_A = accuracy_score(protected_test['true'], protected_test['pred'])
+        logger.info('Adversary accuracy [test] = {}'.format(test_accuracy_A))
+
+    neg_confusion_matrix, pos_confusion_matrix = utils.generate_confusion_matrix(labels_test['true'], labels_test['pred'], protected_test['true'])
+    logger.info('Confusion matrix for the negative label: {}'.format(neg_confusion_matrix))
+    logger.info('Confusion matrix for the positive label: {}'.format(pos_confusion_matrix))
 
     # plot accuracy and loss curves
     logger.info('Generating plots')
@@ -343,32 +346,6 @@ def train():
     plt.tight_layout()
 
     plt.show()
-
-
-def concat_grad(model):
-
-    g = None
-
-    for name, param in model.named_parameters():
-        grad = param.grad
-        if "bias" in name:
-            grad = grad.unsqueeze(dim=1)
-        if g is None:
-            g = param.grad
-        else:
-            g = torch.cat((g, grad), dim=1)
-
-    return g.squeeze(dim=0)
-
-
-def replace_grad(model, grad):
-
-    start = 0
-
-    for name, param in model.named_parameters():
-        numel = param.numel()
-        param.grad.data = grad[start:start + numel].expand_as(param.grad)
-        start += numel
 
 
 if __name__ == "__main__":
