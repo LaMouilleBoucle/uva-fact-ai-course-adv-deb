@@ -38,27 +38,10 @@ if __name__ == '__main__':
 
     batch_size = 10
     data = UTKFace('./UTKFace')
-
-    train_data, test_data = (Subset(data, range(0, data.lengths[0])), Subset(data, range(data.lengths[0], data.lengths[0]+data.lengths[1]+1)) )
     loader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=2)
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=2)
 
     for i, (batch, protected, labels) in enumerate(loader):
         print(batch[0])
-        print(batch.shape)
-        print(protected.shape)
-        print(labels.shape)
-        if i > -1:
-            break
-    for i, (batch, protected, labels) in enumerate(train_loader):
-        print(batch[0])
-        print(batch.shape)
-        print(protected.shape)
-        print(labels.shape)
-        if i > -1:
-            break
-    for i, (batch, protected, labels) in enumerate(test_loader):
         print(batch.shape)
         print(protected.shape)
         print(labels.shape)
