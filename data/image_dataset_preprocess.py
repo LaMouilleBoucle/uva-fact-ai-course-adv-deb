@@ -6,20 +6,19 @@ from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import pandas as pd
+from torchvision import transforms
+
 
 class UTKFace(Dataset):
     def __init__(self, directory, protected_vars=[]):
-        self.images = []
+        self.samples = []
         self.vars = []
         self.labels = []
+        self.transform = transforms.Compose([transforms.ToTensor()])
         for idx, imgdir in enumerate(os.listdir(directory)):
-            with open(directory + '/' + imgdir, 'rb') as img:
-                self.images.append(Image.open(img).convert('RGB'))
+            self.samples.append(directory + '/' + imgdir)
             self.labels.append(imgdir.split('_')[0])
             self.vars.append(imgdir.split('_')[1:3])
-        print(self.images[0])
-        print(self.vars[0])
-        print(self.labels[0])
 
     def one_hot_encode(self, data):
         encoder = LabelEncoder().fit(data)
@@ -29,15 +28,20 @@ class UTKFace(Dataset):
         return encoder, one_hot
 
     def __len__(self):
-        return self.data.shape[0]
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        return self.data[idx], self.labels[idx], self.protected[idx]
+        with open(self.samples[idx], 'rb') as img:
+            image = self.transform(Image.open(img).convert('RGB'))
+
+        return image, self.labels[idx], self.vars[idx]
 
 if __name__ == '__main__':
 
     batch_size = 10
     data = UTKFace('./UTKFace')
+    print(len(data))
+
     loader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=2)
 
     for i, (batch, protected, labels) in enumerate(loader):
