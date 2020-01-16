@@ -45,12 +45,15 @@ class AdultUCI(Dataset):
                 if name is 'income':
                     self.labels = torch.tensor(self.data[name] == ' >50K').float()
                     continue
-                elif name in self.protected_var_names:
-                    if 'protected_temp' in locals():
-                        np.append(protected_temp, one_hot, axis=1)
-                    else:
-                        protected_temp = one_hot
+                elif name is 'sex':
+                    self.protected = torch.tensor(self.data[name] == ' Male').float()
                     continue
+                # elif name in self.protected_var_names:
+                #     if 'protected_temp' in locals():
+                #         np.append(protected_temp, one_hot, axis=1)
+                #     else:
+                #         protected_temp = one_hot
+                #     continue
                 if idx == 0:
                     data_temp = one_hot
                     continue
@@ -66,7 +69,7 @@ class AdultUCI(Dataset):
                     data_temp = np.append(data_temp, np.expand_dims(self.data[name].values, axis=1), axis=1)
 
         self.data = torch.tensor(data_temp).float()
-        self.protected = torch.tensor(protected_temp).float()
+        # self.protected = torch.tensor(protected_temp).float()
 
     def one_hot_encode(self, data):
         encoder = LabelEncoder().fit(data)

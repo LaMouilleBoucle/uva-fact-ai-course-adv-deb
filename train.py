@@ -77,9 +77,10 @@ def train():
     val_accuracies_P = []
     val_accuracies_A = []
 
-    # Learning rate decay
-    decayer.step_count = 1
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, decayer)
+    if args.debias:
+        # Learning rate decay
+        decayer.step_count = 1
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, decayer)
 
     for epoch in range(args.n_epochs):
 
@@ -114,8 +115,8 @@ def train():
             true_y_label.unsqueeze_(dim=1)
 
             true_z_label = z.to(device)
-            protected_train['true'].extend(true_z_label.argmax(dim=1).cpu().numpy().tolist())
-            true_z_label.unsqueeze_(dim=2)
+            protected_train['true'].extend(true_z_label.cpu().numpy().tolist())
+            true_z_label.unsqueeze_(dim=1)
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_train)
@@ -128,7 +129,7 @@ def train():
                 pred_z_logit, pred_z_label = adversary(pred_y_label, true_y_label)
 
                 # compute loss adverserial
-                loss_A = criterion(pred_z_label, true_z_label.argmax(dim=1).float())
+                loss_A = criterion(pred_z_label, true_z_label)
 
                 # reset gradients adversary
                 optimizer_A.zero_grad()
@@ -286,7 +287,7 @@ def train():
             true_y_label.unsqueeze_(dim=1)
             labels_test['true'].extend(true_y_label.cpu().numpy().tolist())
             true_z_label = z.to(device)
-            protected_test['true'].extend(true_z_label.argmax(dim=1).cpu().numpy().tolist())
+            protected_test['true'].extend(true_z_label.cpu().numpy().tolist())
 
             # forward step predictior
             pred_y_logit, pred_y_label = predictor(x_test)
