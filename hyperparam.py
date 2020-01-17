@@ -385,10 +385,12 @@ if __name__ == "__main__":
                     data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
                     data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
 
+    file_name = "data.json"
 
+    if args.debias:
+    	file_name = "data_debias.json"
 
-
-    with open('data.json', 'w', encoding='utf-8') as f: 
+    with open(file_name, 'w', encoding='utf-8') as f: 
         json.dump(data, f, ensure_ascii = False, indent = 4)
 
 
