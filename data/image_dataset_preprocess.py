@@ -1,4 +1,5 @@
 import os
+import math
 from PIL import Image
 import torch
 from torch import nn
@@ -57,12 +58,13 @@ if __name__ == '__main__':
 
     batch_size = 10
     data = UTKFace('./UTKFace', protected_vars=['sex'])
-    
-    print(len(data))
+    train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data)*0.75), len(data) - math.ceil(len(data)*0.75)])
 
-    loader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=2)
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    print(f'Train set is {len(train_data)} images; test set is {len(test_data)}.')
 
-    for i, (batch, protected, labels) in enumerate(loader):
+    for i, (batch, protected, labels) in enumerate(train_loader):
         print(batch[0])
         print(batch.shape)
         print(protected)
