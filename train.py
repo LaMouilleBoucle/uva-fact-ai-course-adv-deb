@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 import coloredlogs
 import torch
@@ -38,7 +39,10 @@ def train():
 
     # load data
     logger.info('Loading the dataset')
-    data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    train_path = os.path.join(base_path, 'data/adult.data')
+    test_path = os.path.join(base_path, 'data/adult.test')
+    data = AdultUCI([train_path, test_path], ['sex'])
     train_dataset = Subset(data, range(0, data.lengths[0]))
     test_dataset = Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1]))
 
