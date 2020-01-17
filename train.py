@@ -324,8 +324,9 @@ def train():
     logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
 
     # plot accuracy and loss curves
-    logger.info('Generating plots')
-    utils.plot_loss_acc((av_train_losses_P,train_accuracies_P), (av_train_losses_A,train_accuracies_A))
+    if args.plot:
+        logger.info('Generating plots')
+        utils.plot_loss_acc((av_train_losses_P,train_accuracies_P), (av_train_losses_A,train_accuracies_A))
 
 
 if __name__ == "__main__":
@@ -346,6 +347,8 @@ if __name__ == "__main__":
                         help='Use the adversial network to mitigate unwanted bias')
     parser.add_argument('--val',  action="store_true",
                         help='Use a validation set during training')
+    parser.add_argument('--plot', action='store_true',
+                        help='Flag to plot the results or not')
 
     args = parser.parse_args()
 
