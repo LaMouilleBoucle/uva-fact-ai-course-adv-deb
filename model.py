@@ -18,6 +18,33 @@ class Predictor(nn.Module):
 
         return logits, predictions
 
+class ImagePredictor(nn.Module):
+    def __init__(self, input_dim, output_dim, drop_probability=0.3):
+        super(Predictor, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.drop_probability = drop_probability
+        self.layers = nn.Sequential(
+            nn.Conv2d(self.input_dim, 400, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(400),
+            nn.ReLU(),
+            nn.Conv2d(400, 400, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(400),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
+            nn.Dropout(drop_probability)
+            nn.Conv2d(400, 800, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(800),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
+            nn.Dropout(drop_probability)
+            nn.Linear(800, self.output_dim),
+            nn.Sigmoid())
+    def forward(self, x):
+        preds = self.layers(x)
+
+        return preds
+
 class Adversary(nn.Module):
     def __init__(self):
         super(Adversary, self).__init__()
