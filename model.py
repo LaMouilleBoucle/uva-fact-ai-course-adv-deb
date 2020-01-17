@@ -32,12 +32,12 @@ class ImagePredictor(nn.Module):
             nn.BatchNorm2d(400),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
-            nn.Dropout(drop_probability)
+            nn.Dropout(drop_probability),
             nn.Conv2d(400, 800, kernel_size=(3,3), stride=1, padding=1),
             nn.BatchNorm2d(800),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
-            nn.Dropout(drop_probability)
+            nn.Dropout(drop_probability),
             nn.Linear(800, self.output_dim),
             nn.Sigmoid())
     def forward(self, x):
