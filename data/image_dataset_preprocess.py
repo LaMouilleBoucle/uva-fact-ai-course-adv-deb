@@ -10,15 +10,32 @@ from torchvision import transforms
 
 
 class UTKFace(Dataset):
-    def __init__(self, directory, protected_vars=[]):
+    def __init__(self, directory, protected_vars):
         self.samples = []
-        self.vars = []
+        self.vars = {'sex':[], 'race':[]}
         self.labels = []
+        self.protected_vars = protected_vars
         self.transform = transforms.Compose([transforms.ToTensor()])
+        skipped = 0
         for idx, imgdir in enumerate(os.listdir(directory)):
+            if len(imgdir.split('_')) < 4:
+                skipped += 1
+                continue
             self.samples.append(directory + '/' + imgdir)
-            self.labels.append(imgdir.split('_')[0])
-            self.vars.append(imgdir.split('_')[1:3])
+            self.labels.append(int(imgdir.split('_')[0]))
+            self.vars['sex'].append(int(imgdir.split('_')[1]))
+            self.vars['race'].append(int(imgdir.split('_')[2]))
+        print(f'Skipped {skipped} images.')
+        
+        for no, var in enumerate(self.vars):
+            if var in self.protected_vars:
+                _, temp = self.one_hot_encode(self.vars[var])
+                if no == 0:
+                    varS = temp
+                else:
+                    varS = np.append(varS, temp, axis=1)
+        self.vars = varS
+        
 
     def one_hot_encode(self, data):
         encoder = LabelEncoder().fit(data)
@@ -34,12 +51,13 @@ class UTKFace(Dataset):
         with open(self.samples[idx], 'rb') as img:
             image = self.transform(Image.open(img).convert('RGB'))
 
-        return image, self.labels[idx], self.vars[idx]
+        return image, self.vars[idx], self.labels[idx]
 
 if __name__ == '__main__':
 
     batch_size = 10
-    data = UTKFace('./UTKFace')
+    data = UTKFace('./UTKFace', protected_vars=['sex'])
+    
     print(len(data))
 
     loader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=2)
@@ -47,7 +65,7 @@ if __name__ == '__main__':
     for i, (batch, protected, labels) in enumerate(loader):
         print(batch[0])
         print(batch.shape)
-        print(protected.shape)
-        print(labels.shape)
+        print(protected)
+        print(labels)
         if i > -1:
             break
