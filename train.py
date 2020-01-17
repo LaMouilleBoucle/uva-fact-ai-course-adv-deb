@@ -60,8 +60,8 @@ def train():
     logger.info('Initialized the predictor and the adversary')
 
     # initialize optimizers
-    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.lr)
-    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.lr)
+    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
+    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
 
     # setup the loss function
     criterion = nn.BCELoss()
@@ -330,8 +330,10 @@ if __name__ == "__main__":
                         help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=20,
                         help='batch size')
-    parser.add_argument('--lr', type=float, default=0.001,
-                        help='learning rate')
+    parser.add_argument('--predictor_lr', type=float, default=0.001,
+                        help='predictor learning rate')
+    parser.add_argument('--adversary_lr', type=float, default=0.001,
+                        help='adversary learning rate')
     parser.add_argument('--eval_freq', type=int, default=100,
                         help='Frequency of evaluation on the validation set')
     parser.add_argument('--print_every', type=int, default=100,
