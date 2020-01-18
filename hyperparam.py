@@ -1,4 +1,4 @@
-import json 
+import json
 from collections import defaultdict
 
 import argparse
@@ -330,7 +330,7 @@ def train():
     # logger.info('Generating plots')
     # utils.plot_loss_acc((av_train_losses_P,train_accuracies_P), (av_train_losses_A,train_accuracies_A))
 
-    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, test_accuracy_P
 
 
 
@@ -358,28 +358,29 @@ if __name__ == "__main__":
 
     lr_P = [0.00001, 0.0001, 0.001, 0.01, 0.1]
     lr_A = [0.0001, 0.001, 0.01, 0.1, 1]
-    batch_size = [32, 64, 128] 
+    batch_size = [32, 64, 128]
 
     data = defaultdict(lambda: defaultdict(list))
 
 
-    for p in lr_P: 
-        for a in lr_A: 
-            for batch in batch_size: 
+    for p in lr_P:
+        for a in lr_A:
+            for batch in batch_size:
 
                 key = str((p, a, batch))
 
                 for i in range(10):
-                    args.predictor_lr = p 
-                    args.adversary_lr = a 
-                    args.batch_size = batch 
+                    args.predictor_lr = p
+                    args.adversary_lr = a
+                    args.batch_size = batch
 
-                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = train()
+                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train()
 
                     data[key]["neg_fpr"].append(neg_fpr)
                     data[key]["neg_fnr"].append(neg_fnr)
                     data[key]["pos_fpr"].append(pos_fpr)
                     data[key]["pos_fnr"].append(pos_fnr)
+                    data[key]["predictor_acc"].append(predictor_acc)
 
 
                     data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
@@ -388,19 +389,7 @@ if __name__ == "__main__":
     file_name = "data.json"
 
     if args.debias:
-    	file_name = "data_debias.json"
+        file_name = "data_debias.json"
 
-    with open(file_name, 'w', encoding='utf-8') as f: 
+    with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii = False, indent = 4)
-
-
-                    
-
-
-
-
-
-
-
-
-
