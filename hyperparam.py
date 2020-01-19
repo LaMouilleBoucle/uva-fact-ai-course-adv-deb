@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, Subset
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
 
 import utils
 from data.adult_dataset_preprocess import AdultUCI
@@ -386,10 +387,12 @@ if __name__ == "__main__":
                     data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
                     data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
 
-    file_name = "data.json"
+    file_name = "data-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     if args.debias:
-        file_name = "data_debias.json"
+        file_name = "data_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     with open(file_name, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii = False, indent = 4)
+
+    logger.info('Results written to file: {}'.format(file_name))
