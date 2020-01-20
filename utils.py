@@ -82,7 +82,7 @@ def forward_batch(batch, predictor, criterion, adversary, device):
 
     return [loss_P], [pred_y_label]
 
-    
+
 def backward_batch(predictor, optimizers, losses):
     debias = len(losses) == 2
 
@@ -126,9 +126,9 @@ def concat_grad(model):
     for name, param in model.named_parameters():
         grad = param.grad
         if "bias" in name:
-            grad = grad.unsqueeze(dim=1)
+            grad = grad.unsqueeze(dim=0)
         if g is None:
-            g = param.grad
+            g = param.grad.view(1,-1)
         else:
             g = torch.cat((g, grad), dim=1)
     return g.squeeze(dim=0)
@@ -138,7 +138,11 @@ def replace_grad(model, grad):
     start = 0
     for name, param in model.named_parameters():
         numel = param.numel()
-        param.grad.data = grad[start:start + numel].expand_as(param.grad)
+        # print(name)
+        # print(param.grad.shape)
+        # print(grad[start:start + numel].shape)
+        # print('')
+        param.grad.data = grad[start:start + numel].view(param.grad.shape)
         start += numel
 
 
