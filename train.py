@@ -33,14 +33,17 @@ def train():
 
         # get feature dimension of data
         data_dims = next(iter(dataloader_train))[0].shape
-        var_dims = next(iter(dataloader_train))[1].shape
-        label_dims = next(iter(dataloader_train))[2].shape
+        var_dims = next(iter(dataloader_train))[2].shape
+        label_dims = next(iter(dataloader_train))[1].shape
         
         input_dim, output_dim = data_dims[1], label_dims[1]
 
         # Initialize the image predictor CNN
 
         predictor = ImagePredictor(input_dim, output_dim).to(device)
+        pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
+        logger.info(f'Number of trainable parameters: {pytorch_total_params}')
+
     else:
         dataloader_train, dataloader_test = utils.get_dataloaders(args.batch_size, logger, images=False)
 

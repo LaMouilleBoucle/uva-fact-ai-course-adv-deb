@@ -16,7 +16,8 @@ class Predictor(nn.Module):
         logits = self.linear_layer(x)
         predictions = self.output_layer(logits)
 
-        return logits, predictions
+        # return logits, predictions
+        return predictions
 
 class ImagePredictor(nn.Module):
     def __init__(self, input_dim, output_dim, drop_probability=0.3):
@@ -24,25 +25,35 @@ class ImagePredictor(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.drop_probability = drop_probability
-        self.layers = nn.Sequential(
-            nn.Conv2d(self.input_dim, 8, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(8),
+        self.convolutions = nn.Sequential(
+            nn.Conv2d(self.input_dim, 6, kernel_size=(3,3), stride=1, padding=0),
+            # input_dim * 100 * 100 -> 6 * 98 * 98
+            nn.BatchNorm2d(6),
             nn.ReLU(),
-            nn.Conv2d(8, 16, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(16),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=0),
+            # 6 * 98 * 98 -> 6 * 48 * 48
+            nn.Conv2d(6, 12, kernel_size=(3,3), stride=1, padding=0),
+            # 6 * 48 * 48 -> 12 * 46 * 46
+            nn.BatchNorm2d(12),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=0),
+            # 12 * 46 * 46 -> 12 * 22 * 22
             nn.Dropout(drop_probability),
-            nn.Conv2d(16, 32, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(12, 24, kernel_size=(3,3), stride=1, padding=0),
+            # 12 * 22 * 22 -> 24 * 20 * 20
+            nn.BatchNorm2d(24),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
-            nn.Dropout(drop_probability),
-            nn.Linear(32, self.output_dim),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=0),
+            # 24 * 20 * 20 -> 24 * 9 * 9
+            nn.Dropout(drop_probability))
+        self.linears = nn.Sequential(
+            nn.Linear(24 * 9 * 9, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.output_dim),
             nn.Sigmoid())
     def forward(self, x):
-        preds = self.layers(x)
-
+        convoluted = self.convolutions(x)
+        preds = self.linears(convoluted.view(convoluted.size(0), -1))
         return preds
 
 class Adversary(nn.Module):

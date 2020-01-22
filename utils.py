@@ -77,13 +77,14 @@ def forward_full(dataloader, model, logger, train=False):
 
 def forward_batch(batch, predictor, criterion, adversary, device):
     x, y, z = batch
-
+    
     x_train = x.to(device)
     true_y_label = y.to(device).unsqueeze_(dim=1)
     true_z_label = z.to(device).unsqueeze_(dim=1)
 
     # forward step predictior
-    pred_y_logit, pred_y_label = predictor(x_train)
+    # pred_y_logit, pred_y_label = predictor(x_train)
+    pred_y_label = predictor(x_train)
 
     # compute loss predictor
     loss_P = criterion(pred_y_label, true_y_label)
