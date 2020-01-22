@@ -11,13 +11,14 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 
 import utils
-from model import Predictor
-from model import Adversary
+from model import Predictor, ImagePredictor, Adversary
 
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def train():
+    global logger
+
     logger.info('Using configuration {}'.format(vars(args)))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,17 +26,34 @@ def train():
 
     # load data
     logger.info('Loading the dataset')
-    dataloader_train, dataloader_test = utils.get_dataloaders(args.batch_size)
 
-    # get feature dimension of data
-    features_dim = next(iter(dataloader_train))[0].shape[1]
+    # check whether to run experiment for UCI Adult or UTKFace datasets
+    if args.image:
+        dataloader_train, dataloader_val, dataloader_test = utils.get_dataloaders(args.batch_size, logger, images=True)
 
-    # Initialize models (for toy data the adversary is also logistic regression)
-    predictor = Predictor(features_dim).to(device)
+        # get feature dimension of data
+        data_dims = next(iter(dataloader_train))[0].shape
+        var_dims = next(iter(dataloader_train))[1].shape
+        label_dims = next(iter(dataloader_train))[2].shape
+        
+        input_dim, output_dim = data_dims[1], label_dims[1]
+
+        # Initialize the image predictor CNN
+
+        predictor = ImagePredictor(input_dim, output_dim).to(device)
+    else:
+        dataloader_train, dataloader_test = utils.get_dataloaders(args.batch_size, logger, images=False)
+
+        # get feature dimension of data
+        features_dim = next(iter(dataloader_train))[0].shape[1]
+        # Initialize models (for toy data the adversary is also logistic regression)
+        predictor = Predictor(features_dim).to(device)
+
     adversary =  Adversary().to(device) if args.debias else None
 
     # initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
+
     if args.debias:
         optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
 
@@ -172,6 +190,7 @@ def train():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    
     parser.add_argument('--n_epochs', type=int, default=100,
                         help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=20,
@@ -188,6 +207,9 @@ if __name__ == "__main__":
                         help='Use the adversial network to mitigate unwanted bias')
     parser.add_argument('--val',  action="store_true",
                         help='Use a validation set during training')
+    parser.add_argument('--image',  action="store_true",
+                        help='Use UTKFace for experiment')
+
 
     args = parser.parse_args()
 
