@@ -1,28 +1,46 @@
 import torch
 from torch.utils.data import DataLoader, Subset, random_split
 from data.adult_dataset_preprocess import AdultUCI
+from data.image_dataset_preprocess import UTKFace
 
+import os
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import MaxAbsScaler
 
-def get_dataloaders(batch_size):
-
+def get_dataloaders(batch_size, logger, images=False):
     base_path = os.path.dirname(os.path.abspath(__file__))
-    train_path = os.path.join(base_path, 'data/adult.data')
-    test_path = os.path.join(base_path, 'data/adult.test')
-    data = AdultUCI([train_path, test_path], ['sex'])
 
-    train_dataset = Subset(data, range(0, end_of_train))
-    test_dataset = Subset(data, range(end_of_train, len(data)))
+    if images:
+        data_path = os.path.join(base_path, 'data/UTKFace')
+        data = UTKFace(data_path, protected_vars=['sex'])
+        train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data)*0.6), len(data) - math.ceil(len(data)*0.6)])
+        test_data, val_data = torch.utils.data.random_split(test_data, [math.ceil(len(test_data)*0.5), len(test_data) - math.ceil(len(test_data)*0.5)])
+        train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
+        test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
+        val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
-    dataloader_train = DataLoader(train_dataset, batch_size, shuffle=True)
-    dataloader_test = DataLoader(test_dataset, batch_size, shuffle=True)
-    dataloaders = (dataloader_train, dataloader_test)
+        logger.info(f'Train set is {len(train_data)} images; val set is {len(val_data)}; test set is {len(test_data)}.')
 
-    return (dataloader_train, dataloader_test)
+        return (train_loader, val_loader, test_loader)
+
+    else:
+        
+        train_path = os.path.join(base_path, 'data/adult.data')
+        test_path = os.path.join(base_path, 'data/adult.test')
+        data = AdultUCI([train_path, test_path], ['sex'])
+
+        train_dataset = Subset(data, range(0, end_of_train))
+        test_dataset = Subset(data, range(end_of_train, len(data)))
+
+        dataloader_train = DataLoader(train_dataset, batch_size, shuffle=True)
+        dataloader_test = DataLoader(test_dataset, batch_size, shuffle=True)
+        dataloaders = (dataloader_train, dataloader_test)        
+        logger.info(f'Train set is {len(train_dataset)} samples; test set is {len(test_dataset)}.')
+
+        return (dataloader_train, dataloader_test)
 
 
 def decayer(lr):
