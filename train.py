@@ -108,12 +108,14 @@ def train():
                         (val_predictions_P, val_predictions_A))
 
         # Forward (and backward, because train=True) pass of the full train set
-        utils.forward_full(dataloader_train, model, train_logger, train=True)
+        utils.forward_full(dataloader_train, model, train_logger, train=True, images=args.image)
 
         # store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
 
         # store train accuracy of predictor after every epoch
+        # print(labels_train['true'])
+        # print(labels_train['pred'])
         train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
         logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
                     'predictor accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P), train_accuracy_P))

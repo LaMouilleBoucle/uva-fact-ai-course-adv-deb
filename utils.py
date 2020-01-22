@@ -49,16 +49,18 @@ def decayer(lr):
     return new_lr
 
 
-def forward_full(dataloader, model, logger, train=False):
+def forward_full(dataloader, model, logger, train=False, images=False):
     predictor, adversary, criterion, optimizer_P, optimizer_A, scheduler, device = model
     labels_dict, protected_dict, losses_lsts, preds_lsts = logger
 
     for i, batch in enumerate(dataloader):
 
-        labels_dict['true'].extend(batch[1].numpy().tolist())
-        protected_dict['true'].extend(batch[2].numpy().tolist())
-
         losses, predictions = forward_batch(batch, predictor, criterion, adversary, device)
+        # print(predictions)
+        # print(predictions[0].shape)
+        # print(losses)
+        # print(labels_dict['true'])
+        # print(labels_dict['true'][0].shape)
         if train:
             backward_batch(predictor, (optimizer_P, (optimizer_A, scheduler)), losses)
 
@@ -71,9 +73,17 @@ def forward_full(dataloader, model, logger, train=False):
 
         # store train loss and prediction of predictor
         losses_lsts[0].append(losses[0].item())
-        preds = (predictions[0] > 0.5).squeeze(dim=1).cpu().numpy().tolist()
-        preds_lsts[0].extend(preds)
-        labels_dict['pred'].extend(preds)
+        protected_dict['true'].extend(batch[2].numpy().tolist())
+
+        if images:
+            labels_dict['true'].extend(torch.max(batch[1], dim=2)[1].squeeze().numpy().tolist())
+            labels_dict['pred'].extend(torch.max(predictions[0], dim=1)[1].numpy().tolist())
+        else:
+            
+            labels_dict['true'].extend(batch[1].numpy().tolist())
+            preds = (predictions[0] > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+            preds_lsts[0].extend(preds)
+            labels_dict['pred'].extend(preds)
 
 def forward_batch(batch, predictor, criterion, adversary, device):
     x, y, z = batch
