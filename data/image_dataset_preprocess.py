@@ -16,7 +16,7 @@ class UTKFace(Dataset):
         self.vars = {'sex':[], 'race':[]}
         self.labels = []
         self.protected_vars = protected_vars
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize(100), transforms.ToTensor()])
         skipped = 0
         for idx, imgdir in enumerate(os.listdir(directory)):
             if len(imgdir.split('_')) < 4:
@@ -63,7 +63,7 @@ class UTKFace(Dataset):
         with open(self.samples[idx], 'rb') as img:
             image = self.transform(Image.open(img).convert('RGB'))
 
-        return image, self.protected_vars[idx], self.labels[idx]
+        return image, self.labels[idx], self.protected_vars[idx]
 
 if __name__ == '__main__':
 
