@@ -23,6 +23,17 @@ class AdultUCI(Dataset):
             with open(dir, 'r') as data:
                 li.append(pd.read_csv(data, names=self.var_names))
                 self.lengths.append(li[-1].shape[0])
+        # Count class imbalance
+        # print(li[0].groupby('income').count())
+        # print(li[1].groupby('income').count())
+
+        # Count gender imbalance
+        # print(li[0].groupby('sex').count())
+        # print(li[1].groupby('sex').count())
+
+        print(li[0].groupby(['sex', 'income']).income.count())
+        print(li[1].groupby(['sex', 'income']).income.count())
+
         self.data = pd.concat(li, axis=0, ignore_index=True)
         self.data['income'] =  self.data['income'].apply(self.clean)
 
