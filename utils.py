@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, random_split
 from data.adult_dataset_preprocess import AdultUCI
 
 import math
@@ -11,13 +11,10 @@ from sklearn.preprocessing import MaxAbsScaler
 def get_dataloaders(batch_size):
 
     data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
-    train_dataset = Subset(data, range(0, data.lengths[0]))
-    test_dataset = Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1]))
-
-    # Scale each feature by its maximum absolute value
-    min_max_scaler = MaxAbsScaler()
-    train_dataset.dataset.data = torch.tensor(min_max_scaler.fit_transform(train_dataset.dataset.data.numpy()))
-    test_dataset.dataset.data = torch.tensor(min_max_scaler.transform(test_dataset.dataset.data.numpy()))
+    end_of_train = int(0.7*len(data))
+    
+    train_dataset = Subset(data, range(0, end_of_train))
+    test_dataset = Subset(data, range(end_of_train, len(data)))
 
     dataloader_train = DataLoader(train_dataset, batch_size, shuffle=True)
     dataloader_test = DataLoader(test_dataset, batch_size, shuffle=True)
