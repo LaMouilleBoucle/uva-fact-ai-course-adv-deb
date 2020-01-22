@@ -27,7 +27,17 @@ class UTKFace(Dataset):
             self.vars['sex'].append(int(imgdir.split('_')[1]))
             self.vars['race'].append(int(imgdir.split('_')[2]))
         print(f'Skipped {skipped} images.')
+
+        _, self.labels = self.one_hot_encode(pd.cut(self.labels,
+            bins=[0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 120],
+            #labels=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65], 
+            right=True))
+        self.labels = torch.tensor(self.labels).float()
         
+
+        # Count number of people per age category
+        # print(self.labels.value_counts())
+
         for no, var in enumerate(self.vars):
             if var in self.protected_vars:
                 _, temp = self.one_hot_encode(self.vars[var])
@@ -35,7 +45,8 @@ class UTKFace(Dataset):
                     varS = temp
                 else:
                     varS = np.append(varS, temp, axis=1)
-        self.vars = varS
+        self.protected_vars = torch.tensor(varS).float()
+
         
 
     def one_hot_encode(self, data):
@@ -52,7 +63,7 @@ class UTKFace(Dataset):
         with open(self.samples[idx], 'rb') as img:
             image = self.transform(Image.open(img).convert('RGB'))
 
-        return image, self.vars[idx], self.labels[idx]
+        return image, self.protected_vars[idx], self.labels[idx]
 
 if __name__ == '__main__':
 
