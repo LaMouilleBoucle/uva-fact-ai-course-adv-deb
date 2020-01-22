@@ -10,9 +10,11 @@ from sklearn.preprocessing import MaxAbsScaler
 
 def get_dataloaders(batch_size):
 
-    data = AdultUCI(['./data/adult.data', './data/adult.test'], ['sex'])
-    end_of_train = int(0.7*len(data))
-    
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    train_path = os.path.join(base_path, 'data/adult.data')
+    test_path = os.path.join(base_path, 'data/adult.test')
+    data = AdultUCI([train_path, test_path], ['sex'])
+
     train_dataset = Subset(data, range(0, end_of_train))
     test_dataset = Subset(data, range(end_of_train, len(data)))
 

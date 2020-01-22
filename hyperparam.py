@@ -47,13 +47,10 @@ def train():
     train_path = os.path.join(base_path, 'data/adult.data')
     test_path = os.path.join(base_path, 'data/adult.test')
     data = AdultUCI([train_path, test_path], ['sex'])
-    train_dataset = Subset(data, range(0, data.lengths[0]))
-    test_dataset = Subset(data, range(data.lengths[0], data.lengths[0] + data.lengths[1]))
+    end_of_train = int(0.7*len(data))
 
-    # Scale each feature by its maximum absolute value
-    min_max_scaler = MaxAbsScaler()
-    train_dataset.dataset.data = torch.tensor(min_max_scaler.fit_transform(train_dataset.dataset.data.numpy()))
-    test_dataset.dataset.data = torch.tensor(min_max_scaler.transform(test_dataset.dataset.data.numpy()))
+    train_dataset = Subset(data, range(0, end_of_train))
+    test_dataset = Subset(data, range(end_of_train, len(data)))
 
     dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
     dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
