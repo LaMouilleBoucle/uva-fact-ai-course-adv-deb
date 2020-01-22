@@ -53,7 +53,7 @@ def print_results_double(results1, results2, tolerance=0.05):
 				best_acc = predictor_acc
 				best_setting = setting
 			print('Setting {} -> Neg FPR: {:.5f}, Pos FPR: {:.5f}, Neg FNR: {:.5f}, Pos FNR: {:.5f}, pred acc: {:.5f}, pred F1: {:.5f}'.format(setting, neg_fpr, pos_fpr, neg_fnr, pos_fnr, predictor_acc, f1))
-	print('Best accuracy found: {} for setting {}'.format(best_acc, setting))
+	print('Best accuracy found: {} for setting {}'.format(best_acc, best_setting))
 
 
 if __name__ == '__main__':

@@ -35,7 +35,12 @@ def decayer(lr):
     return new_lr
 
 
-def train():
+def train(seed):
+
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     logger.info('Using configuration {}'.format(vars(args)))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -350,6 +355,8 @@ if __name__ == "__main__":
                         help='Use the adversial network to mitigate unwanted bias')
     parser.add_argument('--val',  action="store_true",
                         help='Use a validation set during training')
+    parser.add_argument('--seed', type=int, default=40,
+                        help='Seed used to generate other seeds for runs')
 
     args = parser.parse_args()
 
@@ -372,7 +379,7 @@ if __name__ == "__main__":
                     args.adversary_lr = a
                     args.batch_size = batch
 
-                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train()
+                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
 
                     data[key]["neg_fpr"].append(neg_fpr)
                     data[key]["neg_fnr"].append(neg_fnr)
