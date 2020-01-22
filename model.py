@@ -20,25 +20,25 @@ class Predictor(nn.Module):
 
 class ImagePredictor(nn.Module):
     def __init__(self, input_dim, output_dim, drop_probability=0.3):
-        super(Predictor, self).__init__()
+        super(ImagePredictor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.drop_probability = drop_probability
         self.layers = nn.Sequential(
-            nn.Conv2d(self.input_dim, 400, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(400),
+            nn.Conv2d(self.input_dim, 8, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(8),
             nn.ReLU(),
-            nn.Conv2d(400, 400, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(400),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
-            nn.Dropout(drop_probability),
-            nn.Conv2d(400, 800, kernel_size=(3,3), stride=1, padding=1),
-            nn.BatchNorm2d(800),
+            nn.Conv2d(8, 16, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
             nn.Dropout(drop_probability),
-            nn.Linear(800, self.output_dim),
+            nn.Conv2d(16, 32, kernel_size=(3,3), stride=1, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(3,3), stride=2, padding=1),
+            nn.Dropout(drop_probability),
+            nn.Linear(32, self.output_dim),
             nn.Sigmoid())
     def forward(self, x):
         preds = self.layers(x)
