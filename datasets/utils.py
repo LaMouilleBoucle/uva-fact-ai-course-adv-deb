@@ -1,0 +1,48 @@
+import math
+import os
+import torch
+
+from torch.utils.data import DataLoader, Subset
+
+from datasets.adult_dataset import AdultUCI
+from datasets.image_dataset import UTKFace
+
+
+def load_utkface(base_path, batch_size):
+    data_path = os.path.join(base_path, 'data/UTKFace')
+
+    data = UTKFace(data_path, protected_vars=['sex'])
+    train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data) * 0.6),
+                                                                 len(data) - math.ceil(len(data) * 0.6)])
+    test_data, val_data = torch.utils.data.random_split(test_data, [math.ceil(len(test_data) * 0.5),
+                                                                    len(test_data) - math.ceil(len(test_data) * 0.5)])
+
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
+
+    return train_loader, val_loader, test_loader
+
+
+def load_adult_dataset(base_path, batch_size):
+    train_path = os.path.join(base_path, 'data/adult.data')
+    test_path = os.path.join(base_path, 'data/adult.test')
+    data = AdultUCI([train_path, test_path], ['sex'])
+    end_of_train = int(0.7 * len(data))
+    train_dataset = Subset(data, range(0, end_of_train))
+    test_dataset = Subset(data, range(end_of_train, len(data)))
+
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=True)
+
+    return train_loader, test_loader
+
+
+def get_dataloaders(batch_size, images=False):
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if images:
+        train_loader, val_loader, test_loader = load_utkface(base_path, batch_size)
+        return train_loader, val_loader, test_loader
+    else:
+        train_loader, test_loader = load_adult_dataset(base_path, batch_size)
+        return train_loader, test_loader
