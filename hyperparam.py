@@ -10,20 +10,16 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 
 import utils
 from data.adult_dataset_preprocess import AdultUCI
 
-from datasets.toy_dataset import ToyDataset
-
 from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import MaxAbsScaler
 
-from model import Predictor
-from model import Adversary
+from models.model import Predictor
+from models.model import Adversary
 
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -65,7 +61,7 @@ def train(seed):
     features_dim = train_dataset.dataset.data.shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
-    predictor = Predictor(features_dim).to(device)
+    predictor = Predictor(features_dim, 2).to(device)
     adversary = Adversary().to(device)
     logger.info('Initialized the predictor and the adversary')
 
