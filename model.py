@@ -16,8 +16,8 @@ class Predictor(nn.Module):
         logits = self.linear_layer(x)
         predictions = self.output_layer(logits)
 
-        # return logits, predictions
-        return predictions
+        return logits, predictions
+        # return predictions
 
 class ImagePredictor(nn.Module):
     def __init__(self, input_dim, output_dim, drop_probability=0.3):

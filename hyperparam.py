@@ -18,8 +18,8 @@ from data.adult_dataset_preprocess import AdultUCI
 
 from sklearn.metrics import accuracy_score
 
-from models.model import Predictor
-from models.model import Adversary
+from model import Predictor
+from model import Adversary
 
 logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
