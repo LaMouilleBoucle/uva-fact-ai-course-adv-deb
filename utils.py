@@ -27,17 +27,17 @@ def get_dataloaders(batch_size, logger, images=False):
         return (train_loader, val_loader, test_loader)
 
     else:
-        
+
         train_path = os.path.join(base_path, 'data/adult.data')
         test_path = os.path.join(base_path, 'data/adult.test')
         data = AdultUCI([train_path, test_path], ['sex'])
-
+        end_of_train = int(0.7*len(data))
         train_dataset = Subset(data, range(0, end_of_train))
         test_dataset = Subset(data, range(end_of_train, len(data)))
 
         dataloader_train = DataLoader(train_dataset, batch_size, shuffle=True)
         dataloader_test = DataLoader(test_dataset, batch_size, shuffle=True)
-        dataloaders = (dataloader_train, dataloader_test)        
+        dataloaders = (dataloader_train, dataloader_test)
         logger.info(f'Train set is {len(train_dataset)} samples; test set is {len(test_dataset)}.')
 
         return (dataloader_train, dataloader_test)
@@ -79,7 +79,7 @@ def forward_full(dataloader, model, logger, train=False, images=False):
             labels_dict['true'].extend(torch.max(batch[1], dim=2)[1].squeeze().numpy().tolist())
             labels_dict['pred'].extend(torch.max(predictions[0], dim=1)[1].numpy().tolist())
         else:
-            
+
             labels_dict['true'].extend(batch[1].numpy().tolist())
             preds = (predictions[0] > 0.5).squeeze(dim=1).cpu().numpy().tolist()
             preds_lsts[0].extend(preds)
@@ -87,7 +87,7 @@ def forward_full(dataloader, model, logger, train=False, images=False):
 
 def forward_batch(batch, predictor, criterion, adversary, device):
     x, y, z = batch
-    
+
     x_train = x.to(device)
     true_y_label = y.to(device).unsqueeze_(dim=1)
     true_z_label = z.to(device).unsqueeze_(dim=1)

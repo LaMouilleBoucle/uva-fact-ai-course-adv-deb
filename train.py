@@ -198,7 +198,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--n_epochs', type=int, default=100,
                         help='number of epochs')
-    parser.add_argument('--batch_size', type=int, default=20,
+    parser.add_argument('--batch_size', type=int, default=32,
                         help='batch size')
     parser.add_argument('--predictor_lr', type=float, default=0.001,
                         help='predictor learning rate')
