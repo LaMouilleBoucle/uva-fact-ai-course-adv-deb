@@ -61,7 +61,7 @@ def train(seed):
     features_dim = train_dataset.dataset.data.shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
-    predictor = Predictor(features_dim, 2).to(device)
+    predictor = Predictor(features_dim).to(device)
     adversary = Adversary().to(device)
     logger.info('Initialized the predictor and the adversary')
 
