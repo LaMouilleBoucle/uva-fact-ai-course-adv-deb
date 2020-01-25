@@ -344,10 +344,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
-    lr_P = [0.00001, 0.0001, 0.001, 0.01, 0.1]
-    lr_A = [0.0001, 0.001, 0.01, 0.1, 1]
-    batch_size = [64, 128]
+    lr_P = [0.05, 0.01, 0.001, 0.005]
+    lr_A = [0.01, 0.01]
+    batch_size = [1024, 2048, 4096]
 
     data = defaultdict(lambda: defaultdict(list))
 
@@ -356,9 +355,9 @@ if __name__ == "__main__":
     if args.debias:
         file_name = "data_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
-    for p in lr_P:
-        for a in lr_A:
-            for batch in batch_size:
+    for batch in batch_size:
+        for p in lr_P:
+            for a in lr_A:
 
                 key = str((p, a, batch))
 
