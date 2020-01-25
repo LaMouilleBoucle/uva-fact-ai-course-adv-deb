@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, Subset
 from sklearn.preprocessing import MaxAbsScaler
 
 from datasets.adult_dataset import AdultUCI
+from datasets.communities_crime_dataset import CommunitiesCrimeDataset
 from datasets.image_dataset import UTKFace
 
 
@@ -23,6 +24,18 @@ def load_utkface(base_path, batch_size):
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
     return train_loader, val_loader, test_loader
+
+
+def load_communities_crime_dataset(base_path, batch_size):
+    cc_dataset = CommunitiesCrimeDataset(base_path)
+    end_of_train = int(0.7 * len(cc_dataset))
+    train_dataset = Subset(cc_dataset, range(0, end_of_train))
+    test_dataset = Subset(cc_dataset, range(end_of_train, len(cc_dataset)))
+
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=True)
+
+    return train_loader, test_loader
 
 
 def load_adult_dataset(base_path, batch_size):
