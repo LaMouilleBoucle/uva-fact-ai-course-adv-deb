@@ -18,56 +18,7 @@ logger = logging.getLogger('Training log')
 coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
-def train():
-    logger.info('Using configuration {}'.format(vars(args)))
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info('Using device {}'.format(device))
-
-    # Load data
-    logger.info('Loading the dataset')
-
-    # Check whether to run experiment for UCI Adult or UTKFace dataset
-    if args.image:
-        dataloader_train, dataloader_val, dataloader_test = get_dataloaders(args.batch_size, images=True)
-
-        # Get feature dimension of data
-        data_dims = next(iter(dataloader_train))[0].shape
-        var_dims = next(iter(dataloader_train))[2].shape
-        label_dims = next(iter(dataloader_train))[1].shape
-
-        input_dim, output_dim = data_dims[1], label_dims[1]
-
-        # Initialize the image predictor CNN
-
-        predictor = ImagePredictor(input_dim, output_dim).to(device)
-        pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
-        logger.info(f'Number of trainable parameters: {pytorch_total_params}')
-
-    else:
-        dataloader_train, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=False)
-
-        # Get feature dimension of data
-        features_dim = next(iter(dataloader_train))[0].shape[1]
-
-        # Initialize models (for toy data the adversary is also logistic regression)
-        predictor = Predictor(features_dim).to(device)
-
-    adversary = Adversary().to(device) if args.debias else None
-
-    # Initialize optimizers
-    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
-
-    if args.debias:
-        optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
-        utils.decayer.step_count = 1
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, utils.decayer)
-    else:
-        optimizer_A = None
-        scheduler = None
-
-    # Setup the loss function
-    criterion = nn.BCELoss()
+def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device):
 
     av_train_losses_P, av_train_losses_A, av_val_losses_P, av_val_losses_A = [], [], [], []
     train_accuracies_P, train_accuracies_A, val_accuracies_P, val_accuracies_A = [], [], [], []
@@ -132,6 +83,12 @@ def train():
 
     logger.info('Finished training')
 
+    # Plot accuracy and loss curves
+    logger.info('Generating plots')
+    utils.plot_loss_acc((av_train_losses_P, train_accuracies_P), (av_train_losses_A, train_accuracies_A))
+
+
+def test(dataloader_test, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device):
     # Print the model parameters
     logger.info('Learned model parameters: ')
     for name, param in predictor.named_parameters():
@@ -159,10 +116,6 @@ def train():
     logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
     logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
 
-    # Plot accuracy and loss curves
-    logger.info('Generating plots')
-    utils.plot_loss_acc((av_train_losses_P, train_accuracies_P), (av_train_losses_A, train_accuracies_A))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -188,4 +141,58 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    train()
+    logger.info('Using configuration {}'.format(vars(args)))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info('Using device {}'.format(device))
+
+    # Load data
+    logger.info('Loading the dataset')
+
+    # Check whether to run experiment for UCI Adult or UTKFace dataset
+    if args.image:
+        dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=True)
+
+        # Get feature dimension of data
+        data_dims = next(iter(dataloader_train))[0].shape
+        var_dims = next(iter(dataloader_train))[2].shape
+        label_dims = next(iter(dataloader_train))[1].shape
+
+        input_dim, output_dim = data_dims[1], label_dims[1]
+
+        # Initialize the image predictor CNN
+
+        predictor = ImagePredictor(input_dim, output_dim).to(device)
+        pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
+        logger.info(f'Number of trainable parameters: {pytorch_total_params}')
+
+    else:
+        dataloader_train, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=False)
+        dataloader_val = None
+
+        # Get feature dimension of data
+        features_dim = next(iter(dataloader_train))[0].shape[1]
+
+        # Initialize models (for toy data the adversary is also logistic regression)
+        predictor = Predictor(features_dim).to(device)
+
+    adversary = Adversary().to(device) if args.debias else None
+
+    # Initialize optimizers
+    optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
+
+    if args.debias:
+        optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
+        utils.decayer.step_count = 1
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, utils.decayer)
+    else:
+        optimizer_A = None
+        scheduler = None
+
+    # Setup the loss function
+    criterion = nn.BCELoss()
+
+    train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler,
+          device)
+
+    test(dataloader_test, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device)

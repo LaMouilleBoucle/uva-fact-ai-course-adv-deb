@@ -3,18 +3,16 @@ from collections import defaultdict
 
 import argparse
 import logging
-import os
 
 import coloredlogs
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
 import math
 import numpy as np
 from datetime import datetime
 
+import datasets.utils
 import utils
-from datasets.adult_dataset import AdultUCI
 
 from sklearn.metrics import accuracy_score
 
@@ -44,21 +42,11 @@ def train(seed):
 
     # load data
     logger.info('Loading the dataset')
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    train_path = os.path.join(base_path, 'data/adult.data')
-    test_path = os.path.join(base_path, 'data/adult.test')
-    data = AdultUCI([train_path, test_path], ['sex'])
-    end_of_train = int(0.7*len(data))
-
-    train_dataset = Subset(data, range(0, end_of_train))
-    test_dataset = Subset(data, range(end_of_train, len(data)))
-
-    dataloader_train = DataLoader(train_dataset, args.batch_size, shuffle=True)
-    dataloader_test = DataLoader(test_dataset, args.batch_size, shuffle=True)
+    dataloader_train, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=False)
     logger.info('Finished loading the dataset')
 
     # get feature dimension of data
-    features_dim = train_dataset.dataset.data.shape[1]
+    features_dim = next(iter(dataloader_train))[0].shape[1]
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
