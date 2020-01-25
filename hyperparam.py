@@ -74,7 +74,7 @@ def train(seed):
     if args.debias:
         # Learning rate decay
         decayer.step_count = 1
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, decayer)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_P, gamma=0.96)
 
     for epoch in range(args.n_epochs):
 
@@ -94,14 +94,7 @@ def train(seed):
         val_predictions_P = []
         val_predictions_A = []
 
-        # Reinitializing optimizer to update the learning rate
-        # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
-
         for i, (x, y, z) in enumerate(dataloader_train):
-
-            # maybe something like this is needed to implement the stable learning of predictor
-            # during training on UCI Adult dataset
-            # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, lambda x: x/step)
 
             x_train = x.to(device)
             true_y_label = y.to(device)
@@ -162,7 +155,8 @@ def train(seed):
 
             if args.debias:
                 # Decay the learning rate
-                scheduler.step()
+                if decayer.step_count % 1000 == 0:
+                    scheduler.step()
 
                 # Update adversary params
                 optimizer_A.step()
@@ -344,9 +338,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    lr_P = [0.05, 0.01, 0.001, 0.005]
-    lr_A = [0.01, 0.01]
-    batch_size = [1024, 2048, 4096]
+    lr_P = [0.001, 0.01, 0.1]
+    lr_A = [0.001, 0.01, 0.1]
+    batch_size = [64, 128, 256]
 
     data = defaultdict(lambda: defaultdict(list))
 

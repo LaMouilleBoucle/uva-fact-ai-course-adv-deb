@@ -184,7 +184,7 @@ if __name__ == "__main__":
     if args.debias:
         optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
         utils.decayer.step_count = 1
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer_P, utils.decayer)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_P, gamma=0.96)
     else:
         optimizer_A = None
         scheduler = None
