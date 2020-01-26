@@ -172,6 +172,8 @@ if __name__ == "__main__":
 
         # Get feature dimension of data
         features_dim = next(iter(dataloader_train))[0].shape[1]
+        output_dim = next(iter(dataloader_train))[1].unsqueeze(dim=1).shape[1]
+        
 
         # Initialize models (for toy data the adversary is also logistic regression)
         predictor = Predictor(features_dim).to(device)

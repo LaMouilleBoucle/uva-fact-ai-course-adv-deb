@@ -61,6 +61,7 @@ class Adversary(nn.Module):
         self.b = nn.Parameter(torch.zeros(1))
 
     def forward(self, logits, targets):
+        # targets = targets.squeeze()
         s = torch.sigmoid((1 + torch.abs(self.c)) * logits)
         z_hat = torch.cat((s, s * targets, s * (1 - targets)), dim=1) @ self.w2 + self.b
         return z_hat, torch.sigmoid(z_hat)
