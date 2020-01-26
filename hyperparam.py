@@ -113,7 +113,7 @@ def train(seed):
 
             if args.debias:
                 # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_label, true_y_label)
+                pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
 
                 # compute loss adverserial
                 loss_A = criterion(pred_z_label, true_z_label)
