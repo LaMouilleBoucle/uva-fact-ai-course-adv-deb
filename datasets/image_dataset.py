@@ -14,7 +14,7 @@ class UTKFace(Dataset):
         self.samples = []
         self.vars = {'sex':[], 'race':[]}
         self.labels = []
-        self.protected_vars = protected_vars
+        self.protected_var_names = protected_vars
         self.transform = transforms.Compose([transforms.Resize(100), transforms.ToTensor()])
         skipped = 0
         for idx, imgdir in enumerate(os.listdir(directory)):
@@ -38,13 +38,16 @@ class UTKFace(Dataset):
         # print(self.labels.value_counts())
 
         for no, var in enumerate(self.vars):
-            if var in self.protected_vars:
-                _, temp = self.one_hot_encode(self.vars[var])
-                if no == 0:
-                    varS = temp
-                else:
-                    varS = np.append(varS, temp, axis=1)
-        self.protected_vars = torch.tensor(varS).float()
+            if var in self.protected_var_names:
+                # 0 is male
+                self.protected_vars = torch.tensor([value == 0 for value in self.vars[var]]).float()
+                
+        #         _, temp = self.one_hot_encode(self.vars[var])
+        #         if no == 0:
+        #             varS = temp
+        #         else:
+        #             varS = np.append(varS, temp, axis=1)
+        # self.protected_vars = torch.tensor(varS).float()
 
         
 
