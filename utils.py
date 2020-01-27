@@ -24,6 +24,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         true_z_label = z.to(device).unsqueeze_(dim=1)
 
         # Forward step through predictor
+        
         pred_y_logit, pred_y_prob = predictor(x)
 
         # Compute loss with respect to predictor
@@ -45,6 +46,8 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
             pred_z_logit, pred_z_prob = adversary(pred_y_logit, true_y_label)
 
             # Compute loss with respect to adversary
+            # print(pred_z_prob.shape)
+            # print(true_z_label.shape)
             loss_A = criterion(pred_z_prob, true_z_label)
             losses_A.append(loss_A.item())
 
@@ -99,8 +102,15 @@ def concat_grad(model):
         if "bias" in name:
             grad = grad.unsqueeze(dim=0)
         if g is None:
+            # print(name)
+            # print(param.grad.shape)
             g = param.grad.view(1,-1)
+            # print(g.shape)
         else:
+            if len(grad.shape) < 2:
+                grad = grad.unsqueeze(dim=0)
+            else:
+                grad = grad.view(1, -1)
             g = torch.cat((g, grad), dim=1)
     return g.squeeze(dim=0)
 

@@ -154,11 +154,11 @@ if __name__ == "__main__":
         dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=True)
 
         # Get feature dimension of data
-        data_dims = next(iter(dataloader_train))[0].shape
-        var_dims = next(iter(dataloader_train))[2].shape
-        label_dims = next(iter(dataloader_train))[1].shape
+        input_dim = next(iter(dataloader_train))[0].shape[1]
+        protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
+        output_dim = next(iter(dataloader_train))[1].shape[1]
 
-        input_dim, output_dim = data_dims[1], label_dims[1]
+        
 
         # Initialize the image predictor CNN
 
@@ -172,11 +172,14 @@ if __name__ == "__main__":
 
         # Get feature dimension of data
         features_dim = next(iter(dataloader_train))[0].shape[1]
+        protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
+        output_dim = next(iter(dataloader_train))[1].unsqueeze(dim=1).shape[1]
+        
 
         # Initialize models (for toy data the adversary is also logistic regression)
         predictor = Predictor(features_dim).to(device)
 
-    adversary = Adversary().to(device) if args.debias else None
+    adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim).to(device) if args.debias else None
 
     # Initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
