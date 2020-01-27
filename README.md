@@ -2,7 +2,7 @@
 
 Fairness, Accountability, Confidentiality and Fairness in AI is a master's course at the UvA.
 In the context thereof an attempt is made at reproducing a paper on fairness, namely
-Mitigating Unwanted Biases with Adversarial Learning (Zhang et al., 2018).
+Mitigating Unwanted Biases with Adversarial Learning ([Zhang et al., 2018](https://arxiv.org/abs/1801.07593)).
 
 This repository contains code for running the experiment from the paper on the UCI Adult dataset,
 as well as extensions that implement the proposed adversarial network in order to debias the
