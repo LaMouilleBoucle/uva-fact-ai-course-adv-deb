@@ -44,13 +44,14 @@ class ImagePredictor(nn.Module):
         self.linears = nn.Sequential(
             nn.Linear(24 * 9 * 9, 128),
             nn.ReLU(),
-            nn.Linear(128, self.output_dim),
-            nn.Sigmoid())
+            nn.Linear(128, self.output_dim))
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         convoluted = self.convolutions(x)
-        preds = self.linears(convoluted.view(convoluted.size(0), -1))
-        return preds
+        logits = self.linears(convoluted.view(convoluted.size(0), -1))
+        preds = self.sigmoid(logits)
+        return logits, preds
 
 
 class Adversary(nn.Module):

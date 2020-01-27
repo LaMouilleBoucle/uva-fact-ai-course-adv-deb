@@ -24,10 +24,8 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         true_z_label = z.to(device).unsqueeze_(dim=1)
 
         # Forward step through predictor
-        if images:
-            pred_y_prob = predictor(x)
-        else:
-            pred_y_logit, pred_y_prob = predictor(x)
+        
+        pred_y_logit, pred_y_prob = predictor(x)
 
         # Compute loss with respect to predictor
         loss_P = criterion(pred_y_prob, true_y_label)
