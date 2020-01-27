@@ -27,7 +27,7 @@ def load_utkface(base_path, batch_size):
 
 
 def load_communities_crime_dataset(base_path, batch_size):
-    cc_dataset = CommunitiesCrimeDataset(base_path)
+    cc_dataset = CommunitiesCrimeDataset(os.path.join(base_path,'data/'))
     end_of_train = int(0.7 * len(cc_dataset))
     train_dataset = Subset(cc_dataset, range(0, end_of_train))
     test_dataset = Subset(cc_dataset, range(end_of_train, len(cc_dataset)))
@@ -55,11 +55,14 @@ def load_adult_dataset(base_path, batch_size):
     return train_loader, test_loader
 
 
-def get_dataloaders(batch_size, images=False):
+def get_dataloaders(batch_size, dataset):
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if images:
+    if dataset == 'images':
         train_loader, val_loader, test_loader = load_utkface(base_path, batch_size)
         return train_loader, val_loader, test_loader
-    else:
+    elif dataset == 'adult':
         train_loader, test_loader = load_adult_dataset(base_path, batch_size)
+        return train_loader, test_loader
+    elif dataset == 'crime':
+        train_loader, test_loader = load_communities_crime_dataset(base_path, batch_size)
         return train_loader, test_loader
