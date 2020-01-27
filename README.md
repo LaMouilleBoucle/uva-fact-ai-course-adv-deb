@@ -44,10 +44,11 @@ jupyter notebook data_analysis.ipynb
 #### UCI Communities and Crime dataset
 
 ### Authors
-- Vanessa Botha
-- Nithin Holla
-- Azamat Omuraliev
-- Leila Talha
+- Vanessa Botha - [*VanessaBotha*](https://github.com/VanessaBotha)
+- Nithin Holla - [*Nithin-Holla*](https://github.com/Nithin-Holla)
+- Azamat Omuraliev - [*AzamatOmu*](https://github.com/AzamatOmu)
+- Leila Talha - [*LaMouilleBoucle*](https://github.com/LaMouilleBoucle)
 
 ### Acknowledgements
 \\ Include IBM team here, as they were a source of inspiration?
+\\ UCI/UTK for the datasets or better as reference?
