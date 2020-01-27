@@ -29,8 +29,25 @@ To deactivate the environment, use:
 conda deactivate
 ```
 
-% Here how to see results from the notebook
+To run view the notebook with our experimental results, run:
+```bash
+jupyter notebook data_analysis.ipynb
+```
 
 ### Running the experiments
+\\ Explain how to run train.py with different settings for each dataset.
 
-% Here an explanation on how to run experiments on each dataset yourself.
+#### UCI Adult dataset
+
+#### UTKFace dataset
+
+#### UCI Communities and Crime dataset
+
+### Authors
+- Vanessa Botha
+- Nithin Holla
+- Azamat Omuraliev
+- Leila TalhaM
+
+### Acknowledgements
+\\ Include IBM team here, as they were a source of inspiration?
