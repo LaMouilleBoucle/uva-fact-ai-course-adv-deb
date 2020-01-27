@@ -50,7 +50,7 @@ def train(seed):
 
     # Initialize models (for toy data the adversary is also logistic regression)
     predictor = Predictor(features_dim).to(device)
-    adversary = Adversary(features_dim, 1).to(device)
+    adversary = Adversary(1, 1).to(device)
     logger.info('Initialized the predictor and the adversary')
 
     # initialize optimizers
