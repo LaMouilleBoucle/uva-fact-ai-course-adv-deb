@@ -64,8 +64,8 @@ if __name__ == '__main__':
 	print('Without debias: ')
 	print_results_single(results)
 
-	file_name1 = '../data_debias_first.json'
-	file_name2 = '../data_debias_second.json'
+	file_name1 = '../data_debias_final_first.json'
+	file_name2 = '../data_debias_final_second.json'
 	results1 = read_json(file_name1)
 	results2 = read_json(file_name2)
 

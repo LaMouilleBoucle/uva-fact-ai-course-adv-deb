@@ -45,7 +45,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
 
         if adversary is not None:
             # Forward step through adversary
-            pred_z_logit, pred_z_prob = adversary(pred_y_prob, true_y_label)
+            pred_z_logit, pred_z_prob = adversary(pred_y_logit, true_y_label)
 
             # Compute loss with respect to adversary
             # print(pred_z_prob.shape)
@@ -79,7 +79,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
                 # Project gradients of the predictor
                 proj_grad = project_grad(grad_w_Lp, grad_w_La)
                 # Set alpha parameter
-                alpha = math.sqrt(decayer.step_count)
+                alpha = 0.1 # math.sqrt(decayer.step_count)
                 # Modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)
@@ -89,8 +89,8 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
 
             if adversary is not None:
                 # Decay the learning rate
-                if decayer.step_count % 1000 == 0:
-                    scheduler.step()
+                # if decayer.step_count % 1000 == 0:
+                #     scheduler.step()
                 # Update adversary params
                 optimizer_A.step()
 
