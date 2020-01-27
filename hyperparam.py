@@ -356,7 +356,7 @@ if __name__ == "__main__":
         for p in lr_P:
             for a in lr_A:
 
-                key = str((p, a, batch))
+                key = str((p, a, batch, alpha))
 
                 for i in range(5):
                     args.predictor_lr = p
