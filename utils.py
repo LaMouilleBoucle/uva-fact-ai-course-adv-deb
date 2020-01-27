@@ -12,7 +12,7 @@ def decayer(lr):
     return new_lr
 
 
-def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, train=False, images=False):
+def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset, train=False,):
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
@@ -24,21 +24,23 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         true_z_label = z.to(device).unsqueeze_(dim=1)
 
         # Forward step through predictor
-        
+
         pred_y_logit, pred_y_prob = predictor(x)
 
         # Compute loss with respect to predictor
         loss_P = criterion(pred_y_prob, true_y_label)
         losses_P.append(loss_P.item())
 
-        if images:
+        if dataset == 'images':
             labels_dict['true'].extend(torch.max(y, dim=2)[1].squeeze().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].numpy().tolist())
-        else:
+        elif dataset == 'adult':
             labels_dict['true'].extend(y.numpy().tolist())
             pred_y = (pred_y_prob > 0.5).squeeze(dim=1).cpu().numpy().tolist()
             labels_dict['pred'].extend(pred_y)
-
+        else:
+            labels_dict['true'].extend(y.numpy().tolist())
+            labels_dict['pred'].extend(pred_y_prob.detach().numpy().tolist())
         protected_dict['true'].extend(z.numpy().tolist())
 
         if adversary is not None:
@@ -46,12 +48,13 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
             pred_z_logit, pred_z_prob = adversary(pred_y_logit, true_y_label)
 
             # Compute loss with respect to adversary
-            # print(pred_z_prob.shape)
-            # print(true_z_label.shape)
             loss_A = criterion(pred_z_prob, true_z_label)
             losses_A.append(loss_A.item())
 
-            pred_z = (pred_z_prob > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
+            if dataset == 'crime':
+                pred_z = pred_z_prob.detach().numpy().tolist()
+            else:
+                pred_z = (pred_z_prob > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
             protected_dict['pred'].extend(pred_z)
 
         if train:
