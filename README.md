@@ -47,7 +47,7 @@ jupyter notebook data_analysis.ipynb
 - Vanessa Botha
 - Nithin Holla
 - Azamat Omuraliev
-- Leila TalhaM
+- Leila Talha
 
 ### Acknowledgements
 \\ Include IBM team here, as they were a source of inspiration?
