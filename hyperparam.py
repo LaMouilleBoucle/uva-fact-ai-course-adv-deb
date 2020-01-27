@@ -143,7 +143,7 @@ def train(seed):
                 proj_grad = utils.project_grad(grad_w_Lp, grad_w_La)
 
                 # set alpha parameter
-                alpha = math.sqrt(decayer.step_count)
+                alpha = args.alpha
 
                 # modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
@@ -155,8 +155,8 @@ def train(seed):
 
             if args.debias:
                 # Decay the learning rate
-                if decayer.step_count % 1000 == 0:
-                    scheduler.step()
+                # if decayer.step_count % 1000 == 0:
+                #     scheduler.step()
 
                 # Update adversary params
                 optimizer_A.step()
@@ -333,6 +333,8 @@ if __name__ == "__main__":
                         help='Use the adversial network to mitigate unwanted bias')
     parser.add_argument('--val',  action="store_true",
                         help='Use a validation set during training')
+    parser.add_argument('--alpha', type=float, default=0.1,
+                        help='Weight on the adversary gradient')
     parser.add_argument('--seed', type=int, default=40,
                         help='Seed used to generate other seeds for runs')
 
@@ -340,7 +342,8 @@ if __name__ == "__main__":
 
     lr_P = [0.001, 0.01, 0.1]
     lr_A = [0.001, 0.01, 0.1]
-    batch_size = [64, 128, 256]
+    batch = 128
+    alphas = np.linspace(start=0.1, stop=1.0, num=10)
 
     data = defaultdict(lambda: defaultdict(list))
 
@@ -349,7 +352,7 @@ if __name__ == "__main__":
     if args.debias:
         file_name = "data_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
-    for batch in batch_size:
+    for alpha in alphas:
         for p in lr_P:
             for a in lr_A:
 
@@ -359,6 +362,7 @@ if __name__ == "__main__":
                     args.predictor_lr = p
                     args.adversary_lr = a
                     args.batch_size = batch
+                    args.alpha = alpha
 
                     neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
 
