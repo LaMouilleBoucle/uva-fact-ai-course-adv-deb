@@ -54,14 +54,24 @@ class ImagePredictor(nn.Module):
 
 
 class Adversary(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim, protected_dim):
         super(Adversary, self).__init__()
-        self.c = nn.Parameter(torch.ones(1))
-        self.w2 = nn.init.xavier_uniform_(nn.Parameter(torch.empty(3, 1)))
-        self.b = nn.Parameter(torch.zeros(1))
+        self.c = nn.Parameter(torch.ones(1 * protected_dim))
+        self.w2 = nn.init.xavier_uniform_(nn.Parameter(torch.empty(3 * input_dim, 1 * protected_dim)))
+        self.b = nn.Parameter(torch.zeros(1 * protected_dim))
 
     def forward(self, logits, targets):
         # targets = targets.squeeze()
+        if logits.shape != targets.shape:
+            logits = logits.squeeze()
+            targets = targets.squeeze()
+        # print(logits.shape)
+        # print(targets.shape)
+        # print(self.c.shape)
+        # print(self.w2.shape)
+        # print(self.b.shape)
         s = torch.sigmoid((1 + torch.abs(self.c)) * logits)
+        # print(s.shape)
         z_hat = torch.cat((s, s * targets, s * (1 - targets)), dim=1) @ self.w2 + self.b
+        # print(z_hat.shape)
         return z_hat, torch.sigmoid(z_hat)
