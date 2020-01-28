@@ -88,7 +88,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
     utils.plot_loss_acc((av_train_losses_P, train_scores_P), (av_train_losses_A, train_scores_A))
 
     os.makedirs(args.save_model_to, exist_ok=True)
-    torch.save(predictor.state_dict(), args.save_model_to + "pred_biased_"+str(args.debias)+str(args.dataset)+"_seed_"+str(args.seed))
+    torch.save(predictor.state_dict(), args.save_model_to + "pred_biased_"+str(args.debias)+"_"+str(args.dataset)+"_seed_"+str(args.seed))
     if args.debias: 
         torch.save(predictor.state_dict(), args.save_model_to + "adv_seed_"+str(args.seed))
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                         help='Tabular dataset to be used: adult, crime, images')
     parser.add_argument('--seed', type=int, default=None,
                         help='Train with a fixed seed')
-    parser.add_argument('--save_model_to', type=str, default="./models/", 
+    parser.add_argument('--save_model_to', type=str, default="saved_models/", 
                         help='Output path for saved model')
 
 
