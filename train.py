@@ -177,6 +177,7 @@ if __name__ == "__main__":
         input_dim = next(iter(dataloader_train))[0].shape[1]
         protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
         output_dim = next(iter(dataloader_train))[1].shape[1]
+        
 
         # Initialize the image predictor CNN
         predictor = ImagePredictor(input_dim, output_dim).to(device)

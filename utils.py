@@ -19,7 +19,6 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     losses_P, losses_A = [], []
 
     for i, (x, y, z) in enumerate(dataloader):
-
         x = x.to(device)
         # print(y.shape)
         true_y_label = y.to(device).unsqueeze_(dim=1)
@@ -153,14 +152,14 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
 
     negative_indices = np.where(np.array(true_protected) == 0)[0]
     positive_indices = np.where(np.array(true_protected) == 1)[0]
+    neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
+    pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
 
     if dataset == 'adult':
-        neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
         tn, fp, fn, tp = neg_confusion_mat.ravel()
         neg_fpr = calculate_fpr(fp, tn)
         neg_fnr = calculate_fnr(fn, tp)
 
-        pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
         tn, fp, fn, tp = pos_confusion_mat.ravel()
         pos_fpr = calculate_fpr(fp, tn)
         pos_fnr = calculate_fnr(fn, tp)
@@ -168,6 +167,10 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
         return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
     elif dataset == 'images':
         # 0 is male
+        neg_conditionals = conditional_matrix(neg_confusion_mat)
+        pos_conditionals = conditional_matrix(pos_confusion_mat)
+        protected_differences = neg_conditionals - pos_conditionals
+        print(np.sum(protected_differences, axis=1))
         m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
         w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
         m_acc = accuracy_score(true_labels[negative_indices], predictions[negative_indices])
@@ -175,7 +178,13 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
 
         return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc
 
-
+def conditional_matrix(confusion_matrix):
+    # y axis = true label
+    # x axis = pred label
+    # p(y_hat| y) = p(y_hat, y) / p(y)
+    normalization = np.expand_dims(np.sum(confusion_matrix, axis=1), axis=1)
+    conditional_matrix = np.divide(confusion_matrix, normalization)
+    return conditional_matrix
 
 def plot_loss_acc(P, A=None):
     fig, axs = plt.subplots(4, 1)
