@@ -20,8 +20,6 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
-        if i == 10:
-            break
         x = x.to(device)
         # print(y.shape)
         true_y_label = y.to(device).unsqueeze_(dim=1)
