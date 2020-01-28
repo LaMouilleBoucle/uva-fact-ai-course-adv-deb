@@ -170,13 +170,14 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
         neg_conditionals = conditional_matrix(neg_confusion_mat)
         pos_conditionals = conditional_matrix(pos_confusion_mat)
         protected_differences = neg_conditionals - pos_conditionals
-        print(np.sum(protected_differences, axis=1))
+        avg_dif = np.average(protected_differences, axis=1)
+        avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
         m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
         w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
-        m_acc = accuracy_score(true_labels[negative_indices], predictions[negative_indices])
-        w_acc = accuracy_score(true_labels[positive_indices], predictions[positive_indices])
+        m_acc = neg_confusion_mat.diagonal()/neg_confusion_mat.sum(axis=1)
+        w_acc = pos_confusion_mat.diagonal()/pos_confusion_mat.sum(axis=1)
 
-        return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc
+        return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc, avg_dif, avg_abs_dif
 
 def conditional_matrix(confusion_matrix):
     # y axis = true label
