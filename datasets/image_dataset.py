@@ -34,8 +34,14 @@ class UTKFace(Dataset):
         # Count number of people per age category
         # print(self.labels.value_counts())
         # Count number of men vs women 
-        print(f"{self.vars['sex'].count(0)} men.")
-        print(f"{self.vars['sex'].count(1)} women.")
+        # print(f"{self.vars['sex'].count(0)} men.")
+        # print(f"{self.vars['sex'].count(1)} women.")
+        # Count racial ratios
+        # print(f"{self.vars['race'].count(0)} white people.")
+        # print(f"{self.vars['race'].count(1)} black people.")
+        # print(f"{self.vars['race'].count(2)} asian people.")
+        # print(f"{self.vars['race'].count(3)} indian people.")
+        # print(f"{self.vars['race'].count(4)} other people.")
 
         self.labels = torch.tensor(self.labels).float()
         
