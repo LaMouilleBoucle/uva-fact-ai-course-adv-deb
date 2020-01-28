@@ -3,7 +3,7 @@ import torch
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_auc_score
 
 
 
@@ -174,8 +174,10 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
         m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
         w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
-        m_acc = neg_confusion_mat.diagonal()/neg_confusion_mat.sum(axis=1)
-        w_acc = pos_confusion_mat.diagonal()/pos_confusion_mat.sum(axis=1)
+        # m_acc = neg_confusion_mat.diagonal()/neg_confusion_mat.sum(axis=1)
+        # w_acc = pos_confusion_mat.diagonal()/pos_confusion_mat.sum(axis=1)
+        m_acc = roc_auc_score(true_labels[negative_indices], predictions[negative_indices])
+        w_acc = roc_auc_score(true_labels[positive_indices], predictions[positive_indices])
 
         return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc, avg_dif, avg_abs_dif
 
