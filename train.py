@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 import coloredlogs
 
@@ -86,6 +87,12 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
     logger.info('Generating plots')
     utils.plot_loss_acc((av_train_losses_P, train_scores_P), (av_train_losses_A, train_scores_A))
 
+    os.makedirs(args.save_model_to, exist_ok=True)
+    torch.save(predictor.state_dict(), args.save_model_to + "pred_biased_"+str(args.debias)+"_"+str(args.dataset)+"_seed_"+str(args.seed))
+    if args.debias: 
+        torch.save(predictor.state_dict(), args.save_model_to + "adv_seed_"+str(args.seed))
+
+
 
 def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler, device):
     # Print the model parameters
@@ -132,16 +139,21 @@ if __name__ == "__main__":
                         help='predictor learning rate')
     parser.add_argument('--adversary_lr', type=float, default=0.001,
                         help='adversary learning rate')
-    parser.add_argument('--eval_freq', type=int, default=100,
-                        help='Frequency of evaluation on the validation set')
-    parser.add_argument('--print_every', type=int, default=100,
-                        help='number of iterations after which the training progress is printed')
+    # parser.add_argument('--eval_freq', type=int, default=100,
+    #                     help='Frequency of evaluation on the validation set')
+    # parser.add_argument('--print_every', type=int, default=100,
+    #                     help='number of iterations after which the training progress is printed')
     parser.add_argument('--debias', action='store_true',
                         help='Use the adversarial network to mitigate unwanted bias')
     parser.add_argument('--val', action="store_true",
                         help='Use a validation set during training')
     parser.add_argument('--dataset', type=str, default='adult',
                         help='Tabular dataset to be used: adult, crime, images')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Train with a fixed seed')
+    parser.add_argument('--save_model_to', type=str, default="saved_models/", 
+                        help='Output path for saved model')
+
 
     args = parser.parse_args()
 
@@ -150,6 +162,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info('Using device {}'.format(device))
 
+    # Set seed if given
+    if args.seed: 
+        torch.manual_seed(args.seed)
+  
     # Load data
     logger.info('Loading the dataset')
 
@@ -171,12 +187,12 @@ if __name__ == "__main__":
         dataloader_val = None
 
         # Get feature dimension of data
-        features_dim = next(iter(dataloader_train))[0].shape[1]
+        input_dim = next(iter(dataloader_train))[0].shape[1]
         protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
         output_dim = next(iter(dataloader_train))[1].unsqueeze(dim=1).shape[1]
 
         # Initialize models (for toy data the adversary is also logistic regression)
-        predictor = Predictor(features_dim).to(device)
+        predictor = Predictor(input_dim).to(device)
 
     adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim).to(device) if args.debias else None
 

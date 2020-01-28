@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class Predictor(nn.Module):
-    def __init__(self, num_features):
+    def __init__(self, input_dim):
         super(Predictor, self).__init__()
-        self.linear_layer = nn.Linear(num_features, 1)
+        self.linear_layer = nn.Linear(input_dim, 1)
         self.output_layer = nn.Sigmoid()
 
     def forward(self, x):
