@@ -31,16 +31,23 @@ class UTKFace(Dataset):
             bins=[0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 120],
             #labels=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65], 
             right=True))
+        # Count number of people per age category
+        # print(self.labels.value_counts())
+        # Count number of men vs women 
+        print(f"{self.vars['sex'].count(0)} men.")
+        print(f"{self.vars['sex'].count(1)} women.")
+
         self.labels = torch.tensor(self.labels).float()
         
 
-        # Count number of people per age category
-        # print(self.labels.value_counts())
+
 
         for no, var in enumerate(self.vars):
             if var in self.protected_var_names:
                 # 0 is male
+
                 self.protected_vars = torch.tensor([value == 0 for value in self.vars[var]]).float().unsqueeze(dim=1)
+
                 
         #         _, temp = self.one_hot_encode(self.vars[var])
         #         if no == 0:

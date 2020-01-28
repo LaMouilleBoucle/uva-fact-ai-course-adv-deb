@@ -3,7 +3,8 @@ import torch
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_auc_score
+
 
 
 def decayer(lr):
@@ -16,15 +17,16 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
+    prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
-
         x = x.to(device)
         true_y_label = y.to(device)
         true_z_label = z.to(device)
      
         # Forward step through predictor
         pred_y_logit, pred_y_prob = predictor(x)
+        prediction_probs.append(pred_y_prob.cpu().detach().numpy())
 
         # Compute loss with respect to predictor
         loss_P = criterion(pred_y_prob, true_y_label)
@@ -94,7 +96,10 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
                 # Update adversary params
                 optimizer_A.step()
 
-    return losses_P, losses_A, labels_dict, protected_dict
+    if train:
+        return losses_P, losses_A, labels_dict, protected_dict
+    else:
+        return losses_P, losses_A, labels_dict, protected_dict, prediction_probs
 
 
 def concat_grad(model):
@@ -139,26 +144,56 @@ def calculate_fnr(fn, tp):
     return fn / (fn + tp)
 
 
-def calculate_metrics(true_labels, predictions, true_protected):
+def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_probs=None):
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
+    # print(true_labels.shape)
+    # print(predictions.shape)
+    # print(true_protected.shape)
 
     negative_indices = np.where(np.array(true_protected) == 0)[0]
-    neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
-    tn, fp, fn, tp = neg_confusion_mat.ravel()
-    neg_fpr = calculate_fpr(fp, tn)
-    neg_fnr = calculate_fnr(fn, tp)
-
     positive_indices = np.where(np.array(true_protected) == 1)[0]
+    neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
     pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
-    tn, fp, fn, tp = pos_confusion_mat.ravel()
-    pos_fpr = calculate_fpr(fp, tn)
-    pos_fnr = calculate_fnr(fn, tp)
 
-    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+    if dataset == 'adult':
+        tn, fp, fn, tp = neg_confusion_mat.ravel()
+        neg_fpr = calculate_fpr(fp, tn)
+        neg_fnr = calculate_fnr(fn, tp)
 
+        tn, fp, fn, tp = pos_confusion_mat.ravel()
+        pos_fpr = calculate_fpr(fp, tn)
+        pos_fnr = calculate_fnr(fn, tp)
 
-def plot_loss_acc(P, A=None):
+        return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+    elif dataset == 'images':
+        # 0 is male
+        neg_conditionals = conditional_matrix(neg_confusion_mat)
+        pos_conditionals = conditional_matrix(pos_confusion_mat)
+        protected_differences = neg_conditionals - pos_conditionals
+        avg_dif = np.average(protected_differences, axis=1)
+        avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
+        m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
+        w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
+        if pred_probs is not None:
+            pred_probs = np.asarray(pred_probs)
+            pred_probs = np.reshape(pred_probs, (pred_probs.shape[0] * pred_probs.shape[1], -1))
+            one_hot_labels = np.zeros((true_labels.size, true_labels.max()+1))
+            one_hot_labels[np.arange(true_labels.size),true_labels] = 1
+            m_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
+            w_auc = roc_auc_score(one_hot_labels[positive_indices], pred_probs[positive_indices])
+
+        return m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif
+
+def conditional_matrix(confusion_matrix):
+    # y axis = true label
+    # x axis = pred label
+    # p(y_hat| y) = p(y_hat, y) / p(y)
+    normalization = np.expand_dims(np.sum(confusion_matrix, axis=1), axis=1)
+    conditional_matrix = np.divide(confusion_matrix, normalization)
+    return conditional_matrix
+
+def plot_loss_acc(P, A=None, dataset='adult'):
     fig, axs = plt.subplots(4, 1)
     axs[0].plot(np.arange(1, len(P[0])+1), P[0], label="Train loss predictor", color="#E74C3C")
     #axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
@@ -190,4 +225,8 @@ def plot_loss_acc(P, A=None):
     axs[3].legend(loc="upper right")
 
     plt.tight_layout()
-    plt.show()
+    if A is None:
+        title = f'train_{dataset}_no_debias.png'
+    else:
+        title = f'train_{dataset}_debias.png'
+    plt.savefig(title)
