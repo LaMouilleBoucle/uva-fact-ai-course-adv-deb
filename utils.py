@@ -35,8 +35,8 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         losses_P.append(loss_P.item())
 
         if dataset == 'images':
-            labels_dict['true'].extend(torch.max(true_y_label, dim=2)[1].squeeze().numpy().tolist())
-            labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].numpy().tolist())
+            labels_dict['true'].extend(torch.max(true_y_label, dim=2)[1].squeeze().cpu().numpy().tolist())
+            labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].cpu().numpy().tolist())
         elif dataset == 'adult':
             labels_dict['true'].extend(y.numpy().tolist())
             pred_y = (pred_y_prob > 0.5).squeeze(dim=1).cpu().numpy().tolist()
