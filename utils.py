@@ -17,8 +17,11 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
+    prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
+        if i == 10:
+            break
         x = x.to(device)
         # print(y.shape)
         true_y_label = y.to(device).unsqueeze_(dim=1)
@@ -29,6 +32,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         # Forward step through predictor
 
         pred_y_logit, pred_y_prob = predictor(x)
+        prediction_probs.append(pred_y_prob.cpu().detach().numpy())
 
         # Compute loss with respect to predictor
         loss_P = criterion(pred_y_prob, true_y_label)
@@ -98,7 +102,10 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
                 # Update adversary params
                 optimizer_A.step()
 
-    return losses_P, losses_A, labels_dict, protected_dict
+    if train:
+        return losses_P, losses_A, labels_dict, protected_dict
+    else:
+        return losses_P, losses_A, labels_dict, protected_dict, prediction_probs
 
 
 def concat_grad(model):
@@ -143,7 +150,7 @@ def calculate_fnr(fn, tp):
     return fn / (fn + tp)
 
 
-def calculate_metrics(true_labels, predictions, true_protected, dataset):
+def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_probs=None):
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
     # print(true_labels.shape)
@@ -174,12 +181,15 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset):
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
         m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
         w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
-        m_acc = neg_confusion_mat.diagonal()/neg_confusion_mat.sum(axis=1)
-        w_acc = pos_confusion_mat.diagonal()/pos_confusion_mat.sum(axis=1)
-        # m_acc = roc_auc_score(true_labels[negative_indices], predictions[negative_indices])
-        # w_acc = roc_auc_score(true_labels[positive_indices], predictions[positive_indices])
+        if pred_probs is not None:
+            pred_probs = np.asarray(pred_probs)
+            pred_probs = np.reshape(pred_probs, (pred_probs.shape[0] * pred_probs.shape[1], -1))
+            one_hot_labels = np.zeros((true_labels.size, true_labels.max()+1))
+            one_hot_labels[np.arange(true_labels.size),true_labels] = 1
+            m_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
+            w_auc = roc_auc_score(one_hot_labels[positive_indices], pred_probs[positive_indices])
 
-        return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc, avg_dif, avg_abs_dif
+        return m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif
 
 def conditional_matrix(confusion_matrix):
     # y axis = true label

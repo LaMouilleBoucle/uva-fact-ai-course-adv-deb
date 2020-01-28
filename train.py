@@ -102,7 +102,7 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
 
     # Run the model on the test set after training
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict = utils.forward_full(dataloader_test,
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
                                                                                                  predictor, optimizer_P,
                                                                                                  criterion, adversary,
                                                                                                  optimizer_A, scheduler,
@@ -123,10 +123,10 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
         logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
     elif args.dataset == 'images':
-        m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc, avg_dif, avg_abs_dif = utils.calculate_metrics(
-            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
-        logger.info(f'For men: precision {m_prec}, recall {m_recall}, F1 {m_fscore}, support {m_support}, accuracy {m_acc}.')
-        logger.info(f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, accuracy {w_acc}.')
+        m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset, pred_probs=pred_y_prob)
+        logger.info(f'For men: precision {m_prec}, recall {m_recall}, F1 {m_fscore}, support {m_support}, AUC {m_auc}.')
+        logger.info(f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, AUC {w_auc}.')
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
         logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
 
