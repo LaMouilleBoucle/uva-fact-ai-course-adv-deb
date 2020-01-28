@@ -85,7 +85,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
 
     # Plot accuracy and loss curves
     logger.info('Generating plots')
-    utils.plot_loss_acc((av_train_losses_P, train_scores_P), (av_train_losses_A, train_scores_A))
+    utils.plot_loss_acc((av_train_losses_P, train_scores_P), (av_train_losses_A, train_scores_A), args.dataset)
 
     os.makedirs(args.save_model_to, exist_ok=True)
     torch.save(predictor.state_dict(), args.save_model_to + "pred_biased_"+str(args.debias)+"_"+str(args.dataset)+"_seed_"+str(args.seed))
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         input_dim = next(iter(dataloader_train))[0].shape[1]
         protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
         output_dim = next(iter(dataloader_train))[1].shape[1]
-        
+
 
         # Initialize the image predictor CNN
         predictor = ImagePredictor(input_dim, output_dim).to(device)

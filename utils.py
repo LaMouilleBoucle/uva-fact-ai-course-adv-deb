@@ -186,7 +186,7 @@ def conditional_matrix(confusion_matrix):
     conditional_matrix = np.divide(confusion_matrix, normalization)
     return conditional_matrix
 
-def plot_loss_acc(P, A=None):
+def plot_loss_acc(P, A=None, dataset='adult'):
     fig, axs = plt.subplots(4, 1)
     axs[0].plot(np.arange(1, len(P[0])+1), P[0], label="Train loss predictor", color="#E74C3C")
     #axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
@@ -218,4 +218,8 @@ def plot_loss_acc(P, A=None):
     axs[3].legend(loc="upper right")
 
     plt.tight_layout()
-    plt.show()
+    if A is None:
+        title = f'train_{dataset}_no_debias.png'
+    else:
+        title = f'train_{dataset}_debias.png'
+    plt.savefig(title)
