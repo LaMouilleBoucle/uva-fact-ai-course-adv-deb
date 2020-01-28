@@ -20,8 +20,11 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     for i, (x, y, z) in enumerate(dataloader):
 
         x = x.to(device)
+        # print(y.shape)
         true_y_label = y.to(device).unsqueeze_(dim=1)
         true_z_label = z.to(device).unsqueeze_(dim=1)
+        # print(y.shape)
+        # print(true_y_label.shape)
 
         # Forward step through predictor
 
@@ -32,7 +35,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
         losses_P.append(loss_P.item())
 
         if dataset == 'images':
-            labels_dict['true'].extend(torch.max(y, dim=2)[1].squeeze().numpy().tolist())
+            labels_dict['true'].extend(torch.max(true_y_label, dim=2)[1].squeeze().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].numpy().tolist())
         elif dataset == 'adult':
             labels_dict['true'].extend(y.numpy().tolist())
