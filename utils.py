@@ -17,16 +17,22 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
-    prediction_probs = []
+    # prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
+        
+            
         x = x.to(device)
         true_y_label = y.to(device)
         true_z_label = z.to(device)
      
         # Forward step through predictor
         pred_y_logit, pred_y_prob = predictor(x)
-        prediction_probs.append(pred_y_prob.cpu().detach().numpy())
+        if train is False:
+            if i == 0:
+                prediction_probs = pred_y_prob.cpu().detach().numpy()
+            else:
+                prediction_probs = np.concatenate((prediction_probs, pred_y_prob.cpu().detach().numpy()), axis=0)
 
         # Compute loss with respect to predictor
         loss_P = criterion(pred_y_prob, true_y_label)
@@ -176,8 +182,6 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
         m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
         w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
         if pred_probs is not None:
-            pred_probs = np.asarray(pred_probs)
-            pred_probs = np.reshape(pred_probs, (pred_probs.shape[0] * pred_probs.shape[1], -1))
             one_hot_labels = np.zeros((true_labels.size, true_labels.max()+1))
             one_hot_labels[np.arange(true_labels.size),true_labels] = 1
             m_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
