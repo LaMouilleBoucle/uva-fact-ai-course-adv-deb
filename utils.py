@@ -3,7 +3,8 @@ import torch
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score
+
 
 
 def decayer(lr):
@@ -143,23 +144,37 @@ def calculate_fnr(fn, tp):
     return fn / (fn + tp)
 
 
-def calculate_metrics(true_labels, predictions, true_protected):
+def calculate_metrics(true_labels, predictions, true_protected, dataset):
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
+    # print(true_labels.shape)
+    # print(predictions.shape)
+    # print(true_protected.shape)
 
     negative_indices = np.where(np.array(true_protected) == 0)[0]
-    neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
-    tn, fp, fn, tp = neg_confusion_mat.ravel()
-    neg_fpr = calculate_fpr(fp, tn)
-    neg_fnr = calculate_fnr(fn, tp)
-
     positive_indices = np.where(np.array(true_protected) == 1)[0]
-    pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
-    tn, fp, fn, tp = pos_confusion_mat.ravel()
-    pos_fpr = calculate_fpr(fp, tn)
-    pos_fnr = calculate_fnr(fn, tp)
 
-    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+    if dataset == 'adult':
+        neg_confusion_mat = confusion_matrix(true_labels[negative_indices], predictions[negative_indices])
+        tn, fp, fn, tp = neg_confusion_mat.ravel()
+        neg_fpr = calculate_fpr(fp, tn)
+        neg_fnr = calculate_fnr(fn, tp)
+
+        pos_confusion_mat = confusion_matrix(true_labels[positive_indices], predictions[positive_indices])
+        tn, fp, fn, tp = pos_confusion_mat.ravel()
+        pos_fpr = calculate_fpr(fp, tn)
+        pos_fnr = calculate_fnr(fn, tp)
+
+        return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+    elif dataset == 'images':
+        # 0 is male
+        m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
+        w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
+        m_acc = accuracy_score(true_labels[negative_indices], predictions[negative_indices])
+        w_acc = accuracy_score(true_labels[positive_indices], predictions[positive_indices])
+
+        return m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc
+
 
 
 def plot_loss_acc(P, A=None):

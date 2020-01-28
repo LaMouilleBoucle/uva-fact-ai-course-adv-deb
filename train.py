@@ -108,13 +108,18 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
         test_score_A = metric(protected_test_dict['true'], protected_test_dict['pred'])
         logger.info('Adversary score [test] = {}'.format(test_score_A))
 
-    if args.dataset != 'crime':
+    if args.dataset == 'adult':
         neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
-            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'])
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
         logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
         logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
+    elif args.dataset == 'images':
+        m_prec, m_recall, m_fscore, m_support, m_acc, w_prec, w_recall, w_fscore, w_support, w_acc = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
+        logger.info(f'For men: precision {m_prec}, recall {m_recall}, F1 {m_fscore}, support {m_support}, accuracy {m_acc}.')
+        logger.info(f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, accuracy {w_acc}.')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
