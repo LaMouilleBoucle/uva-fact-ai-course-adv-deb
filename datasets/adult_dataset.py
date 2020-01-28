@@ -54,10 +54,10 @@ class AdultUCI(Dataset):
             if name not in self.real_var_names:
                 self.encoder[name], one_hot = self.one_hot_encode(self.data[name])
                 if name is 'income':
-                    self.labels = torch.tensor(self.data[name] == ' >50K').float()
+                    self.labels = torch.tensor(self.data[name] == ' >50K').float().unsqueeze(dim=1)
                     continue
                 elif name is 'sex':
-                    self.protected = torch.tensor(self.data[name] == ' Male').float()
+                    self.protected = torch.tensor(self.data[name] == ' Male').float().unsqueeze(dim=1)
                     continue
                 # elif name in self.protected_var_names:
                 #     if 'protected_temp' in locals():

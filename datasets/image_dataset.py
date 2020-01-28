@@ -51,8 +51,9 @@ class UTKFace(Dataset):
         for no, var in enumerate(self.vars):
             if var in self.protected_var_names:
                 # 0 is male
-                self.protected_vars = torch.tensor([value == 0 for value in self.vars[var]]).float()
-        
+
+                self.protected_vars = torch.tensor([value == 0 for value in self.vars[var]]).float().unsqueeze(dim=1)
+
                 
         #         _, temp = self.one_hot_encode(self.vars[var])
         #         if no == 0:

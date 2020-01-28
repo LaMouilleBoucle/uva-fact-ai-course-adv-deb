@@ -171,29 +171,22 @@ if __name__ == "__main__":
     # Load data
     logger.info('Loading the dataset')
 
+    dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, args.dataset)
+
+    # Get feature dimension of data
+    input_dim = next(iter(dataloader_train))[0].shape[1]
+    protected_dim = next(iter(dataloader_train))[2].shape[1]
+    output_dim = next(iter(dataloader_train))[1].shape[1]
+
+
     # Check whether to run experiment for UCI Adult or UTKFace dataset
     if args.dataset == 'images':
-        dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, 'images')
-
-        # Get feature dimension of data
-        input_dim = next(iter(dataloader_train))[0].shape[1]
-        protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
-        output_dim = next(iter(dataloader_train))[1].shape[1]
-
 
         # Initialize the image predictor CNN
         predictor = ImagePredictor(input_dim, output_dim).to(device)
         pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
         logger.info(f'Number of trainable parameters: {pytorch_total_params}')
     else:
-        dataloader_train, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, args.dataset)
-        dataloader_val = None
-
-        # Get feature dimension of data
-        input_dim = next(iter(dataloader_train))[0].shape[1]
-        protected_dim = next(iter(dataloader_train))[2].unsqueeze(dim=1).shape[1]
-        output_dim = next(iter(dataloader_train))[1].unsqueeze(dim=1).shape[1]
-
         # Initialize models (for toy data the adversary is also logistic regression)
         predictor = Predictor(input_dim).to(device)
 

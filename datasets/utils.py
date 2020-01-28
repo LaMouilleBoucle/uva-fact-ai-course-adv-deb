@@ -59,10 +59,9 @@ def get_dataloaders(batch_size, dataset):
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if dataset == 'images':
         train_loader, val_loader, test_loader = load_utkface(base_path, batch_size)
-        return train_loader, val_loader, test_loader
     elif dataset == 'adult':
         train_loader, test_loader = load_adult_dataset(base_path, batch_size)
-        return train_loader, test_loader
+        val_loader = None
     elif dataset == 'crime':
         train_loader, test_loader = load_communities_crime_dataset(base_path, batch_size)
-        return train_loader, test_loader
+    return train_loader, val_loader, test_loader

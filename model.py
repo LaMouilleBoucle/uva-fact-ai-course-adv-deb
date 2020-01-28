@@ -63,9 +63,11 @@ class Adversary(nn.Module):
 
     def forward(self, logits, targets):
         # targets = targets.squeeze()
-        if logits.shape != targets.shape:
-            logits = logits.squeeze()
-            targets = targets.squeeze()
+
+
+        # if logits.shape != targets.shape:
+        #     logits = logits.squeeze()
+        #     targets = targets.squeeze()
         # print(logits.shape)
         # print(targets.shape)
         # print(self.c.shape)
