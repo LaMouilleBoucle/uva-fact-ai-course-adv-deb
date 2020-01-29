@@ -4,10 +4,16 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
-import datasets.utils
-
 
 class CommunitiesCrimeDataset(Dataset):
+    """
+    Communities and Crime dataset from http://archive.ics.uci.edu/ml/datasets/communities+and+crime. The task is to
+    predict the crime rate which is continuous. The protected variable is the percentage of whites in the population which
+    is also continuous.
+
+    Args:
+        data_dir (str): Directory containing the data
+    """
     def __init__(self, data_dir):
         self.attributes = pd.read_csv(os.path.join(data_dir, 'communities_attributes.csv'),
                                       skipinitialspace=True).columns
@@ -24,10 +30,3 @@ class CommunitiesCrimeDataset(Dataset):
 
     def __getitem__(self, index):
         return self.data[index], self.ground_truth[index], self.protected[index]
-
-
-if __name__ == '__main__':
-    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../data')
-    train_loader, test_loader = datasets.utils.load_communities_crime_dataset(data_path, batch_size=32)
-    for (x, y, z) in train_loader:
-        print(z)
