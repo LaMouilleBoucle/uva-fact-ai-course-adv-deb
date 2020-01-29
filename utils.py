@@ -4,7 +4,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_auc_score
-
+from collections import Counter
 
 
 def decayer(lr):
@@ -13,7 +13,7 @@ def decayer(lr):
     return new_lr
 
 
-def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset, train=False,):
+def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset, train=False):
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
@@ -28,6 +28,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
      
         # Forward step through predictor
         pred_y_logit, pred_y_prob = predictor(x)
+
         if train is False:
             if i == 0:
                 prediction_probs = pred_y_prob.cpu().detach().numpy()
@@ -42,13 +43,13 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
             labels_dict['true'].extend(torch.max(true_y_label, dim=1)[1].cpu().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].cpu().numpy().tolist())
         elif dataset == 'adult':
-            labels_dict['true'].extend(y.numpy().tolist())
-            pred_y = (pred_y_prob > 0.5).squeeze(dim=1).cpu().numpy().tolist()
+            labels_dict['true'].extend(y.squeeze().numpy().tolist())
+            pred_y = (pred_y_prob > 0.5).int().squeeze(dim=1).cpu().numpy().tolist()
             labels_dict['pred'].extend(pred_y)
         else:
             labels_dict['true'].extend(y.numpy().tolist())
             labels_dict['pred'].extend(pred_y_prob.detach().numpy().tolist())
-        protected_dict['true'].extend(z.numpy().tolist())
+        protected_dict['true'].extend(z.squeeze().numpy().tolist())
 
         if adversary is not None:
             # Forward step through adversary
@@ -65,7 +66,6 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
             protected_dict['pred'].extend(pred_z)
 
         if train:
-
             if adversary is not None:
                 # Reset gradients of adversary and predictor
                 optimizer_A.zero_grad()
@@ -105,7 +105,8 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     if train:
         return losses_P, losses_A, labels_dict, protected_dict
     else:
-        return losses_P, losses_A, labels_dict, protected_dict, prediction_probs
+        mutual_info = mutual_information(protected_dict["true"], labels_dict['true'], labels_dict['pred'])
+        return losses_P, losses_A, labels_dict, protected_dict, prediction_probs, mutual_info
 
 
 def concat_grad(model):
@@ -234,3 +235,29 @@ def plot_loss_acc(P, A=None, dataset='adult'):
     else:
         title = f'train_{dataset}_debias.png'
     plt.savefig(title)
+
+
+
+def mutual_information(rv1, rv2, conditional_rv = None):
+    # print(rv1)
+    # print(rv2)
+    # print(conditional_rv)
+    # conditional_rv = None
+
+    # if conditional_rv == None: 
+    #     # calculate H(Z)
+    #     # calculate H(Z|Y_hat)
+
+    
+    #     print(Counter(rv1))
+    #     total = 
+
+    # else: 
+    #     # calculate H(Z|Y)
+    #     # calculate H(Z|Y_hat, Y)
+
+
+
+    
+
+

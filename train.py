@@ -102,7 +102,7 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
 
     # Run the model on the test set after training
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
                                                                                                  predictor, optimizer_P,
                                                                                                  criterion, adversary,
                                                                                                  optimizer_A, scheduler,
