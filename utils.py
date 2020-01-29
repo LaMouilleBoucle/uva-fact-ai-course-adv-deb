@@ -15,12 +15,14 @@ def decayer(lr):
     return new_lr
 
 
-def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset,
-                 train=False):
+def forward_full(dataloader, predictor, adversary, criterion, device, dataset, optimizer_P=None, optimizer_A=None, scheduler=None, train=False):
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
     # prediction_probs = []
+
+    print(criterion)
+    print(device)
 
     for i, (x, y, z) in enumerate(dataloader):
 

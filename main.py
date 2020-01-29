@@ -30,14 +30,15 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         # Forward (and backward when train=True) pass of the full train set
         train_losses_P, train_losses_A, labels_train_dict, protected_train_dict = utils.forward_full(dataloader_train,
                                                                                                      predictor,
-                                                                                                     optimizer_P,
-                                                                                                     criterion,
                                                                                                      adversary,
-                                                                                                     optimizer_A,
-                                                                                                     scheduler,
+                                                                                                     criterion,
                                                                                                      device,
                                                                                                      args.dataset,
+                                                                                                     optimizer_P,
+                                                                                                     optimizer_A,
+                                                                                                     scheduler,
                                                                                                      train=True)
+
 
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
@@ -95,7 +96,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         torch.save(predictor.state_dict(), args.save_model_to + "adv_seed_" + str(args.seed))
 
 
-def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler, device):
+def test(dataloader_test, predictor, adversary, criterion, metric, device):
     # Print the model parameters
     logger.info('Learned model parameters: ')
     for name, param in predictor.named_parameters():
@@ -103,12 +104,8 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
 
     # Run the model on the test set after training
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(
-            dataloader_test,
-            predictor, optimizer_P,
-            criterion, adversary,
-            optimizer_A, scheduler,
-            device, args.dataset)
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
+                                                                                                 predictor, adversary, criterion, device, args.dataset)
 
     test_score_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
     logger.info('Predictor score [test] = {}'.format(test_score_P))
@@ -213,4 +210,4 @@ if __name__ == "__main__":
     train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, metric, adversary, optimizer_A,
           scheduler,
           device)
-    test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler, device)
+    test(dataloader_test, predictor, adversary, criterion, metric, device)
