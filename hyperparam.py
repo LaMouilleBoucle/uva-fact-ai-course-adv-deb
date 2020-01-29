@@ -163,14 +163,24 @@ def train(seed):
         test_accuracy_A = metric(protected_test_dict['true'], protected_test_dict['pred'])
         logger.info('Adversary accuracy [test] = {}'.format(test_accuracy_A))
 
-    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
+    if args.dataset == 'adult':
+        neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
             labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
-    logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
-    logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
-    logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
-    logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
+        logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
+        logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
+        logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
+        logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
 
-    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, test_accuracy_P
+        return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, test_accuracy_P
+    elif args.dataset == 'images':
+        neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset, pred_probs=pred_y_prob)
+        logger.info(f'For men: precision {m_prec}, recall {m_recall}, F1 {m_fscore}, support {m_support}, AUC {m_auc}.')
+        logger.info(f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, AUC {w_auc}.')
+        logger.info(f'Average difference between conditional probabilities: {avg_dif}')
+        logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
+
+        return neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, test_accuracy_P
 
 
 if __name__ == "__main__":
@@ -199,18 +209,25 @@ if __name__ == "__main__":
                         help='Tabular dataset to be used: adult, crime, images')
 
     args = parser.parse_args()
-
+    if args.dataset == 'adult':
+        no_avgs = 5
+        upper_alpha = 1.0
+        no_alphas = 10
+    elif args.dataset == 'images':
+        no_avgs = 3
+        upper_alpha = 0.9
+        no_alphas = 5
     lr_P = [0.001, 0.01, 0.1]
     lr_A = [0.001, 0.01, 0.1]
     batch = 128
-    alphas = np.linspace(start=0.1, stop=1.0, num=10)
+    alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
 
     data = defaultdict(lambda: defaultdict(list))
 
-    file_name = "data-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
+    file_name = args.dataset + "-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     if args.debias:
-        file_name = "data_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
+        file_name = args.dataset + "_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     for alpha in alphas:
         for p in lr_P:
@@ -218,23 +235,37 @@ if __name__ == "__main__":
 
                 key = str((p, a, batch, alpha))
 
-                for i in range(5):
+                for i in range(no_avgs):
                     args.predictor_lr = p
                     args.adversary_lr = a
                     args.batch_size = batch
                     args.alpha = alpha
 
-                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
+                    if args.dataset == 'adult':
+                        neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
 
-                    data[key]["neg_fpr"].append(neg_fpr)
-                    data[key]["neg_fnr"].append(neg_fnr)
-                    data[key]["pos_fpr"].append(pos_fpr)
-                    data[key]["pos_fnr"].append(pos_fnr)
+                        data[key]["neg_fpr"].append(neg_fpr)
+                        data[key]["neg_fnr"].append(neg_fnr)
+                        data[key]["pos_fpr"].append(pos_fpr)
+                        data[key]["pos_fnr"].append(pos_fnr)
+                        data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
+                        data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
+                    elif args.dataset == 'images':
+                        neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, predictor_acc = train(args.seed+i)
+                        data[key]["neg_auc"].append(neg_auc)
+                        data[key]["pos_auc"].append(pos_auc)
+                        data[key]["avg_dif"].append(avg_dif)
+                        data[key]["avg_abs_dif"].append(avg_abs_dif)
+                        data[key]["neg_prec"].append(neg_prec)
+                        data[key]["neg_recall"].append(neg_recall)
+                        data[key]["neg_fscore"].append(neg_fscore)
+                        data[key]["neg_support"].append(neg_support)
+                        data[key]["neg_auc"].append(neg_auc)
+                        data[key]["pos_prec"].append(pos_prec)
+                        data[key]["pos_recall"].append(pos_recall)
+                        data[key]["pos_fscore"].append(pos_fscore)
+                        data[key]["pos_support"].append(pos_support)
                     data[key]["predictor_acc"].append(predictor_acc)
-
-
-                    data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
-                    data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
 
                 with open(file_name, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)

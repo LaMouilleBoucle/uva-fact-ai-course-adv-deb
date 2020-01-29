@@ -125,12 +125,10 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
         logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
     elif args.dataset == 'images':
-        m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
-            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset,
-            pred_probs=pred_y_prob)
-        logger.info(f'For men: precision {m_prec}, recall {m_recall}, F1 {m_fscore}, support {m_support}, AUC {m_auc}.')
-        logger.info(
-            f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, AUC {w_auc}.')
+        neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset, pred_probs=pred_y_prob)
+        logger.info(f'Negative protected variable (men): precision {neg_prec}, recall {neg_recall}, F1 {neg_fscore}, support {neg_support}, AUC {neg_auc}.')
+        logger.info(f'Positive protected variable (women): precision {pos_prec}, recall {pos_recall}, F1 {pos_fscore}, support {pos_support}, AUC {pos_auc}.')
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
         logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
 

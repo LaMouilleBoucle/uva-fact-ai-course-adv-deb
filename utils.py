@@ -210,23 +210,23 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
 
         return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
     elif dataset == 'images':
-        # 0 is male
+        # 0 is male, so negative = male; positive = female
         neg_conditionals = conditional_matrix(neg_confusion_mat)
         pos_conditionals = conditional_matrix(pos_confusion_mat)
         protected_differences = neg_conditionals - pos_conditionals
         avg_dif = np.average(protected_differences, axis=1)
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
-        m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices],
-                                                                                predictions[negative_indices])
-        w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices],
-                                                                                predictions[positive_indices])
+        neg_prec, neg_recall, neg_fscore, neg_support = precision_recall_fscore_support(true_labels[negative_indices], 
+                                                                                        predictions[negative_indices])
+        pos_prec, pos_recall, pos_fscore, pos_support = precision_recall_fscore_support(true_labels[positive_indices], 
+                                                                                        predictions[positive_indices])
         if pred_probs is not None:
-            one_hot_labels = np.zeros((true_labels.size, true_labels.max() + 1))
-            one_hot_labels[np.arange(true_labels.size), true_labels] = 1
-            m_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
-            w_auc = roc_auc_score(one_hot_labels[positive_indices], pred_probs[positive_indices])
+            one_hot_labels = np.zeros((true_labels.size, true_labels.max()+1))
+            one_hot_labels[np.arange(true_labels.size),true_labels] = 1
+            neg_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
+            pos_auc = roc_auc_score(one_hot_labels[positive_indices], pred_probs[positive_indices])
 
-        return m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif
+        return neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif
 
 
 def conditional_matrix(confusion_matrix):
