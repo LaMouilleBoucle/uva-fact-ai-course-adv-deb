@@ -209,11 +209,18 @@ if __name__ == "__main__":
                         help='Tabular dataset to be used: adult, crime, images')
 
     args = parser.parse_args()
-
+    if args.dataset == 'adult':
+        no_avgs = 5
+        upper_alpha = 1.0
+        no_alphas = 10
+    elif args.dataset == 'images':
+        no_avgs = 3
+        upper_alpha = 0.9
+        no_alphas = 5
     lr_P = [0.001, 0.01, 0.1]
     lr_A = [0.001, 0.01, 0.1]
     batch = 128
-    alphas = np.linspace(start=0.1, stop=1.0, num=10)
+    alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
 
     data = defaultdict(lambda: defaultdict(list))
 
@@ -228,7 +235,7 @@ if __name__ == "__main__":
 
                 key = str((p, a, batch, alpha))
 
-                for i in range(5):
+                for i in range(no_avgs):
                     args.predictor_lr = p
                     args.adversary_lr = a
                     args.batch_size = batch
@@ -243,7 +250,7 @@ if __name__ == "__main__":
                         data[key]["pos_fnr"].append(pos_fnr)
                         data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
                         data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
-                    elif args.dataset == 'image':
+                    elif args.dataset == 'images':
                         neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, predictor_acc = train(args.seed+i)
                         data[key]["neg_auc"].append(neg_auc)
                         data[key]["pos_auc"].append(pos_auc)
