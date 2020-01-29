@@ -2,7 +2,11 @@ import torch
 
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_auc_score
+from collections import Counter
+from collections import defaultdict
+
 
 
 def decayer(lr):
@@ -278,20 +282,86 @@ def plot_loss_acc(P, A=None, dataset='adult'):
     plt.savefig(title)
 
 
-def mutual_information(rv1, rv2, conditional_rv=None):
-    pass
-    # print(rv1)
-    # print(rv2)
-    # print(conditional_rv)
-    # conditional_rv = None
+def entropy(rv1, cond_rv):
+    entropy = 0
 
-    # if conditional_rv == None: 
-    #     # calculate H(Z)
-    #     # calculate H(Z|Y_hat)
+    if cond_rv is None:
+        # Calculate entropy H(rv1)
+        distr_rv1 = get_distr(rv1)
+        for prob in distr_rv1.values():
+            entropy += prob * math.log(1 / prob, 2)
+    else: 
+        # Calculate entropy H(rv1 | cond_rv)
+        distr_rv1_conditioned = get_conditional_distr(rv1, cond_rv)
+        distr_cond_rv = get_distr(cond_rv)
 
-    #     print(Counter(rv1))
-    #     total = 
+        for event, prob in distr_cond_rv.items(): 
+            entropy_part = 0
+            for cond_prob in distr_rv1_conditioned[event].values(): 
+                entropy_part += cond_prob * math.log(1 / cond_prob, 2)
+            entropy += prob * entropy_part
+    return entropy
 
-    # else: 
-    #     # calculate H(Z|Y)
-    #     # calculate H(Z|Y_hat, Y)
+
+def get_joint(rv1, rv2): 
+    return [i for i in zip(rv1, rv2)]
+
+
+def get_distr(rv): 
+
+    distr = {}
+    for event, frequency in Counter(rv).items():
+        distr[event] = frequency / len(rv)
+
+    return distr
+
+def get_conditional_distr(rv1, rv2): 
+
+    # Get joint distribution
+    distr_joint = get_distr(get_joint(rv1, rv2))
+
+    # Get distribution of random variable we want to condition on 
+    distr_rv2 = get_distr(rv2)
+
+    # Get distribution of random variable 1 conditioned of random variable 2
+    distr_cond = defaultdict(lambda: {})
+    for event, prob in distr_joint.items():
+
+        distr_cond[event[1]][event[0]] = prob / distr_rv2[event[1]]
+
+    return distr_cond
+
+
+
+def mutual_information(rv1, rv2, cond_rv = None):
+
+    mutual_information = None
+
+    if cond_rv is None: 
+
+        # Compute entropy H(rv1)
+        entropy1 = entropy(rv1)
+
+        # Compute entropy H(rv1 | rv2)
+        entropy2 = entropy(rv1, cond_rv = rv2)
+
+        # Compute mutual information I(rv1; rv2)
+        mutual_information = entropy1 - entropy2
+
+    else: 
+        # Compute entropy H(rv1 | cond_rv)
+        entropy1 = entropy(rv1, cond_rv = cond_rv)
+
+        # Compute entropy H(rv1 | cond_rv, rv2)
+        entropy2 = entropy(rv1, cond_rv = get_joint(cond_rv, rv2))
+
+        # # Compute mutual information I(rv1; rv2 | cond_rv)
+        mutual_information = entropy1 - entropy2
+
+    
+    print("MUTUAL INFORMATION", mutual_information)
+    return mutual_information
+
+
+    
+
