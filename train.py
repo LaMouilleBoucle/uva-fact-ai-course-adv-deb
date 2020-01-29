@@ -130,6 +130,7 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
         logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -141,10 +142,6 @@ if __name__ == "__main__":
                         help='predictor learning rate')
     parser.add_argument('--adversary_lr', type=float, default=0.001,
                         help='adversary learning rate')
-    # parser.add_argument('--eval_freq', type=int, default=100,
-    #                     help='Frequency of evaluation on the validation set')
-    # parser.add_argument('--print_every', type=int, default=100,
-    #                     help='number of iterations after which the training progress is printed')
     parser.add_argument('--debias', action='store_true',
                         help='Use the adversarial network to mitigate unwanted bias')
     parser.add_argument('--val', action="store_true",

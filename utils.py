@@ -239,6 +239,7 @@ def plot_loss_acc(P, A=None, dataset='adult'):
 
 
 def mutual_information(rv1, rv2, conditional_rv = None):
+    pass
     # print(rv1)
     # print(rv2)
     # print(conditional_rv)
