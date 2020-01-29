@@ -336,7 +336,6 @@ def get_distr(rv):
 
     Returns: dictionary of probabilties where the keys are the events of rv
     """
-
     distr = {}
     for event, frequency in Counter(rv).items():
         distr[event] = frequency / len(rv)
