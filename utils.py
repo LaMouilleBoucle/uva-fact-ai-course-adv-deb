@@ -21,9 +21,6 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
     losses_P, losses_A = [], []
     # prediction_probs = []
 
-    print(criterion)
-    print(device)
-
     for i, (x, y, z) in enumerate(dataloader):
 
         x = x.to(device)

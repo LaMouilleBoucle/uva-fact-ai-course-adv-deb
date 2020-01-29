@@ -96,7 +96,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         torch.save(predictor.state_dict(), args.save_model_to + "adv_seed_" + str(args.seed))
 
 
-def test(dataloader_test, predictor, adversary, criterion, metric, device):
+def test(dataloader_test, predictor, adversary, criterion, metric, device, debias, dataset):
     # Print the model parameters
     logger.info('Learned model parameters: ')
     for name, param in predictor.named_parameters():
@@ -104,26 +104,26 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device):
 
     # Run the model on the test set after training
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
-                                                                                                 predictor, adversary, criterion, device, args.dataset)
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test, 
+            predictor, adversary, criterion, device, dataset)
 
     test_score_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
     logger.info('Predictor score [test] = {}'.format(test_score_P))
 
-    if args.debias:
+    if debias:
         test_score_A = metric(protected_test_dict['true'], protected_test_dict['pred'])
         logger.info('Adversary score [test] = {}'.format(test_score_A))
 
-    if args.dataset == 'adult':
+    if dataset == 'adult':
         neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
-            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], dataset)
         logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
         logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
-    elif args.dataset == 'images':
+    elif dataset == 'images':
         neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
-            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset, pred_probs=pred_y_prob)
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], dataset, pred_probs=pred_y_prob)
         logger.info(f'Negative protected variable (men): precision {neg_prec}, recall {neg_recall}, F1 {neg_fscore}, support {neg_support}, AUC {neg_auc}.')
         logger.info(f'Positive protected variable (women): precision {pos_prec}, recall {pos_recall}, F1 {pos_fscore}, support {pos_support}, AUC {pos_auc}.')
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         criterion = nn.BCELoss()
         metric = accuracy_score
 
-    train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, metric, adversary, optimizer_A,
-          scheduler,
-          device)
-    test(dataloader_test, predictor, adversary, criterion, metric, device)
+    train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, 
+            metric, adversary, optimizer_A, scheduler, device)
+
+    test(dataloader_test, predictor, adversary, criterion, metric, device, args.debias, args.dataset)
