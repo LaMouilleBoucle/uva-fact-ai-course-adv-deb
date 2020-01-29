@@ -3,6 +3,12 @@ import torch.nn as nn
 
 
 class Predictor(nn.Module):
+    """
+    Basic predictor model for binary output.
+
+    Args:
+        input_dim (int): Number of input dimensions
+    """
     def __init__(self, input_dim):
         super(Predictor, self).__init__()
         self.linear_layer = nn.Linear(input_dim, 1)
@@ -15,11 +21,19 @@ class Predictor(nn.Module):
 
 
 class ImagePredictor(nn.Module):
-    def __init__(self, input_dim, output_dim, drop_probability=0.3):
+    """
+    Convolutional predictor model for images.
+
+    Args:
+        input_dim (int): Number of input dimensions
+        output_dim (int): Number of output dimensions
+        drop_prob (float, default 0.3): Probability for dropout
+    """
+    def __init__(self, input_dim, output_dim, drop_prob=0.3):
         super(ImagePredictor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.drop_probability = drop_probability
+        self.drop_probability = drop_prob
         self.convolutions = nn.Sequential(
             nn.Conv2d(self.input_dim, 6, kernel_size=(3, 3), stride=1, padding=0),
             # input_dim * 100 * 100 -> 6 * 98 * 98
@@ -33,14 +47,14 @@ class ImagePredictor(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3, 3), stride=2, padding=0),
             # 12 * 46 * 46 -> 12 * 22 * 22
-            nn.Dropout(drop_probability),
+            nn.Dropout(drop_prob),
             nn.Conv2d(12, 24, kernel_size=(3, 3), stride=1, padding=0),
             # 12 * 22 * 22 -> 24 * 20 * 20
             nn.BatchNorm2d(24),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3, 3), stride=2, padding=0),
             # 24 * 20 * 20 -> 24 * 9 * 9
-            nn.Dropout(drop_probability))
+            nn.Dropout(drop_prob))
         self.linears = nn.Sequential(
             nn.Linear(24 * 9 * 9, 128),
             nn.ReLU(),
@@ -55,6 +69,13 @@ class ImagePredictor(nn.Module):
 
 
 class Adversary(nn.Module):
+    """
+    Adversary model as described in Zhang et al., Mitigating Unwanted Biases with Adversarial Learning.
+
+    Args:
+        input_dim (int): Number of input dimensions
+        protected_dim (int): Number of dimensions for the protected variable
+    """
     def __init__(self, input_dim, protected_dim):
         super(Adversary, self).__init__()
         self.c = nn.Parameter(torch.ones(1 * protected_dim))
@@ -62,19 +83,6 @@ class Adversary(nn.Module):
         self.b = nn.Parameter(torch.zeros(1 * protected_dim))
 
     def forward(self, logits, targets):
-        # targets = targets.squeeze()
-
-
-        # if logits.shape != targets.shape:
-        #     logits = logits.squeeze()
-        #     targets = targets.squeeze()
-        # print(logits.shape)
-        # print(targets.shape)
-        # print(self.c.shape)
-        # print(self.w2.shape)
-        # print(self.b.shape)
         s = torch.sigmoid((1 + torch.abs(self.c)) * logits)
-        # print(s.shape)
         z_hat = torch.cat((s, s * targets, s * (1 - targets)), dim=1) @ self.w2 + self.b
-        # print(z_hat.shape)
         return z_hat, torch.sigmoid(z_hat)

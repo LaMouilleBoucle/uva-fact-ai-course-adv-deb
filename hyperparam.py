@@ -7,16 +7,16 @@ import logging
 import coloredlogs
 import torch
 import torch.nn as nn
-import math
 import numpy as np
 from datetime import datetime
+
 
 import datasets.utils
 import utils
 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 
-from model import Predictor
+from model import Predictor, ImagePredictor
 from model import Adversary
 
 logger = logging.getLogger('Training log')
@@ -42,215 +42,102 @@ def train(seed):
 
     # load data
     logger.info('Loading the dataset')
-    dataloader_train, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, images=False)
-    logger.info('Finished loading the dataset')
+    dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, args.dataset)
 
-    # get feature dimension of data
-    features_dim = next(iter(dataloader_train))[0].shape[1]
+    # Get feature dimension of data
+    input_dim = next(iter(dataloader_train))[0].shape[1]
+    protected_dim = next(iter(dataloader_train))[2].shape[1]
+    output_dim = next(iter(dataloader_train))[1].shape[1]
 
-    # Initialize models (for toy data the adversary is also logistic regression)
-    predictor = Predictor(features_dim).to(device)
-    adversary = Adversary(1, 1).to(device)
-    logger.info('Initialized the predictor and the adversary')
+    # Check whether to run experiment for UCI Adult or UTKFace dataset
+    if args.dataset == 'images':
 
-    # initialize optimizers
+        # Initialize the image predictor CNN
+        predictor = ImagePredictor(input_dim, output_dim).to(device)
+        pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
+        logger.info(f'Number of trainable parameters: {pytorch_total_params}')
+    else:
+        # Initialize models (for toy data the adversary is also logistic regression)
+        predictor = Predictor(input_dim).to(device)
+
+    adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim).to(device) if args.debias else None
+
+    # Initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
-    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
-
-    # setup the loss function
-    criterion = nn.BCELoss()
-
-    av_train_losses_P = []
-    av_train_losses_A = []
-    av_val_losses_P = []
-    av_val_losses_A = []
-
-
-    train_accuracies_P = []
-    train_accuracies_A = []
-    val_accuracies_P = []
-    val_accuracies_A = []
-
     if args.debias:
-        # Learning rate decay
-        decayer.step_count = 1
+        optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
+        utils.decayer.step_count = 1
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_P, gamma=0.96)
+    else:
+        optimizer_A = None
+        scheduler = None
+
+    # Setup the loss function
+    if args.dataset == 'crime':
+        criterion = nn.MSELoss()
+        metric = mean_squared_error
+    else:
+        criterion = nn.BCELoss()
+        metric = accuracy_score
+
+    av_train_losses_P, av_train_losses_A, av_val_losses_P, av_val_losses_A = [], [], [], []
+    train_scores_P, train_scores_A, val_scores_P, val_scores_A = [], [], [], []
 
     for epoch in range(args.n_epochs):
 
-        train_losses_P = []
-        train_losses_A = []
-        val_losses_P = []
-        val_losses_A = []
+        # Forward (and backward when train=True) pass of the full train set
+        train_losses_P, train_losses_A, labels_train_dict, protected_train_dict = utils.forward_full(dataloader_train,
+                                                                                                     predictor,
+                                                                                                     optimizer_P,
+                                                                                                     criterion,
+                                                                                                     adversary,
+                                                                                                     optimizer_A,
+                                                                                                     scheduler,
+                                                                                                     device,
+                                                                                                     args.dataset,
+                                                                                                     train=True)
 
-        labels_train = {'true': [], 'pred': []}
-        labels_val = {'true': [], 'pred': []}
-
-        protected_train = {'true': [], 'pred': []}
-        protected_val = {'true': [], 'pred': []}
-
-        train_predictions_P = []
-        train_predictions_A = []
-        val_predictions_P = []
-        val_predictions_A = []
-
-        for i, (x, y, z) in enumerate(dataloader_train):
-
-            x_train = x.to(device)
-            true_y_label = y.to(device)
-            labels_train['true'].extend(true_y_label.cpu().numpy().tolist())
-            true_y_label.unsqueeze_(dim=1)
-
-            true_z_label = z.to(device)
-            protected_train['true'].extend(true_z_label.cpu().numpy().tolist())
-            true_z_label.unsqueeze_(dim=1)
-
-            # forward step predictior
-            pred_y_logit, pred_y_label = predictor(x_train)
-
-            # compute loss predictor
-            loss_P = criterion(pred_y_label, true_y_label)
-
-            if args.debias:
-                # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
-
-                # compute loss adverserial
-                loss_A = criterion(pred_z_label, true_z_label)
-
-                # reset gradients adversary
-                optimizer_A.zero_grad()
-                optimizer_P.zero_grad()
-
-                # compute gradients adversary
-                loss_A.backward(retain_graph=True)
-
-                # concatenate gradients of adversary params
-                grad_w_La = utils.concat_grad(predictor)
-
-            # reset gradients
-            optimizer_P.zero_grad()
-
-            # compute gradients predictor
-            loss_P.backward()
-
-            if args.debias:
-
-                # concatenate gradients of predictor params
-                grad_w_Lp = utils.concat_grad(predictor)
-
-                # project predictor gradients
-                proj_grad = utils.project_grad(grad_w_Lp, grad_w_La)
-
-                # set alpha parameter
-                alpha = args.alpha
-
-                # modify and replace the gradient of the predictor
-                grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
-                utils.replace_grad(predictor, grad_w_Lp)
-
-
-            # update predictor weights
-            optimizer_P.step()
-
-            if args.debias:
-                # Decay the learning rate
-                # if decayer.step_count % 1000 == 0:
-                #     scheduler.step()
-
-                # Update adversary params
-                optimizer_A.step()
-
-                # store train loss and prediction of the adversery
-                train_losses_A.append(loss_A.item())
-                protecteds = (pred_z_label > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
-                train_predictions_A.extend(protecteds)
-                protected_train['pred'].extend(protecteds)
-
-            # store train loss and prediction of predictor
-            train_losses_P.append(loss_P.item())
-            preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
-            train_predictions_P.extend(preds)
-            labels_train['pred'].extend(preds)
-
-        # store average training losses of predictor after every epoch
+        # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
 
-        # store train accuracy of predictor after every epoch
-        train_accuracy_P = accuracy_score(labels_train['true'], labels_train['pred'])
-        # logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
-        #             'predictor accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P), train_accuracy_P))
-        train_accuracies_P.append(train_accuracy_P)
+        # Store train accuracy of predictor after every epoch
+        train_score_P = metric(labels_train_dict['true'], labels_train_dict['pred'])
+        logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
+                    'predictor score [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P),
+                                                              train_score_P))
+        train_scores_P.append(train_score_P)
 
+        # Store train accuracy of adversary after every epoch, if applicable
         if args.debias:
             av_train_losses_A.append(np.mean(train_losses_A))
-            # train_accuracy_A = accuracy_score(train_dataset.z.squeeze(dim=1).numpy(), train_predictions_A)
-            train_accuracy_A = accuracy_score(protected_train['true'], protected_train['pred'])
-            # logger.info('Epoch {}/{}: adversary loss [train] = {:.3f}, '
-            #             'adversary accuracy [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_A),
-            #                                                          train_accuracy_A))
-            train_accuracies_A.append(train_accuracy_A)
+            train_score_A = metric(protected_train_dict['true'], protected_train_dict['pred'])
+            logger.info('Epoch {}/{}: adversary loss [train] = {:.3f}, '
+                        'adversary score [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_A),
+                                                                  train_score_A))
+            train_scores_A.append(train_score_A)
 
+        # Evaluate on validation set after every epoch, if applicable
         if args.val:
-
-            # evaluate after every epoch
             with torch.no_grad():
+                # Forward pass of full validation set
+                val_losses_P, val_losses_A, labels_val_dict, protected_val_dict = \
+                    utils.forward_full(dataloader_val, predictor, optimizer_P, criterion, adversary, optimizer_A,
+                                       scheduler, device)
 
-                for i, (x, y, z) in enumerate(dataloader_val):
-
-                    x_val = x.to(device)
-                    true_y_label = y.to(device)
-                    labels_val['true'].extend(true_y_label.cpu().numpy().tolist())
-                    true_z_label = z.to(device)
-                    protected_val['true'].extend(true_z_label.cpu().numpy().tolist())
-
-                    # forward step predictior
-                    pred_y_logit, pred_y_label = predictor(x_val)
-
-                    # compute loss predictor
-                    loss_P_val = criterion(pred_y_label, true_y_label)
-
-                    if args.debias:
-                        # forward step adverserial
-                        pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
-
-                        # compute loss adverserial
-                        loss_A_val = criterion(pred_z_label, true_z_label)
-
-                        # store validation loss of adverserial
-                        val_losses_A.append(loss_A_val.item())
-                        protecteds = (pred_z_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
-                        val_predictions_A.extend(protecteds)
-                        protected_val['pred'].extend(protecteds)
-
-                    # store validation loss and prediction of predictor
-                    val_losses_P.append(loss_P_val.item())
-                    preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
-                    val_predictions_P.extend(preds)
-                    labels_val['pred'].extend(preds)
-
-
-            # store average validation losses of predictor after every epoch
+            # Store average validation losses of predictor after every epoch
             av_val_losses_P.append(np.mean(val_losses_P))
 
-
-            # store train accuracy of predictor after every epoch
-            # val_accuracy = accuracy_score(val_dataset.labels.squeeze(dim=1).numpy(), val_predictions)
-            # val_accuracy_P = accuracy_score(val_dataset.y.squeeze(dim=1).numpy(), val_predictions_P)
-            val_accuracy_P = accuracy_score(labels_val['true'], labels_val['pred'])
-            # logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
-            #             'predictor accuracy [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P), val_accuracy_P))
-            val_accuracies_P.append(val_accuracy_P)
-
+            # Store train accuracy of predictor after every epoch
+            val_score_P = metric(labels_val_dict['true'], labels_val_dict['pred'])
+            logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
+                        'predictor score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P),
+                                                                val_score_P))
 
             if args.debias:
-                av_val_losses_A.append(np.mean(val_losses_A))
-                # val_accuracy_A = accuracy_score(val_dataset.z.squeeze(dim=1).numpy(), val_predictions_A)
-                val_accuracy_A = accuracy_score(protected_val['true'], protected_val['pred'])
-                # logger.info('Epoch {}/{}: adversary loss [val] = {:.3f}, '
-                #             'adversary accuracy [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_A),
-                                                                       # val_accuracy_A))
-                val_accuracies_A.append(val_accuracy_A)
+                val_score_A = metric(protected_val_dict['true'], protected_val_dict['pred'])
+                logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
+                            'predictor score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P),
+                                                                    val_score_A))
 
     # print parameters after training
     logger.info('Finished training')
@@ -260,59 +147,41 @@ def train(seed):
     for name, param in predictor.named_parameters():
         logger.info('Name: {}, value: {}'.format(name, param))
 
-    test_predictions_P = []
-    test_predictions_A = []
-    labels_test = {'true': [], 'pred': []}
-    protected_test = {'true': [], 'pred': []}
-
     # run the model on the test set after training
     with torch.no_grad():
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
+                                                                                                 predictor, optimizer_P,
+                                                                                                 criterion, adversary,
+                                                                                                 optimizer_A, scheduler,
+                                                                                                 device, args.dataset)
 
-        for i, (x, y, z) in enumerate(dataloader_test):
 
-            x_test = x.to(device)
-            true_y_label = y.to(device)
-            true_y_label.unsqueeze_(dim=1)
-            labels_test['true'].extend(true_y_label.cpu().numpy().tolist())
-            true_z_label = z.to(device)
-            protected_test['true'].extend(true_z_label.cpu().numpy().tolist())
-
-            # forward step predictior
-            pred_y_logit, pred_y_label = predictor(x_test)
-
-            if args.debias:
-                # forward step adverserial
-                pred_z_logit, pred_z_label = adversary(pred_y_logit, true_y_label)
-
-                # store predictions of predictor and adversary
-                protecteds = (pred_z_label > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
-                test_predictions_A.extend(protecteds)
-                protected_test['pred'].extend(protecteds)
-
-            #store predictions of predictor and adversary
-            preds = (pred_y_label > 0.5).squeeze(dim=1).cpu().numpy().tolist()
-            test_predictions_P.extend(preds)
-            labels_test['pred'].extend(preds)
-
-    test_accuracy_P = accuracy_score(labels_test['true'], labels_test['pred'])
+    test_accuracy_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
     logger.info('Predictor accuracy [test] = {}'.format(test_accuracy_P))
 
     if args.debias:
-        test_accuracy_A = accuracy_score(protected_test['true'], protected_test['pred'])
+        test_accuracy_A = metric(protected_test_dict['true'], protected_test_dict['pred'])
         logger.info('Adversary accuracy [test] = {}'.format(test_accuracy_A))
 
-    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(labels_test['true'], labels_test['pred'], protected_test['true'])
-    logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
-    logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
-    logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
-    logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
+    if args.dataset == 'adult':
+        neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset)
+        logger.info('Confusion matrix for the negative protected label: \n{}'.format(neg_confusion_mat))
+        logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
+        logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
+        logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
 
-    # plot accuracy and loss curves
-    # logger.info('Generating plots')
-    # utils.plot_loss_acc((av_train_losses_P,train_accuracies_P), (av_train_losses_A,train_accuracies_A))
+        return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, test_accuracy_P
+    elif args.dataset == 'images':
+        neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
+            labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], args.dataset, pred_probs=pred_y_prob)
+        logger.info(f'Negative protected variable (men): precision {neg_prec}, recall {neg_recall}, F1 {neg_fscore}, support {neg_support}, AUC {neg_auc}.')
+        logger.info(f'Positive protected variable (women): precision {pos_prec}, recall {pos_recall}, F1 {pos_fscore}, support {pos_support}, AUC {pos_auc}.')
+        logger.info(f'Average difference between conditional probabilities: {avg_dif}')
+        logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
 
-    return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, test_accuracy_P
 
+        return neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, test_accuracy_P
 
 
 if __name__ == "__main__":
@@ -337,20 +206,29 @@ if __name__ == "__main__":
                         help='Weight on the adversary gradient')
     parser.add_argument('--seed', type=int, default=40,
                         help='Seed used to generate other seeds for runs')
+    parser.add_argument('--dataset', type=str, default='adult',
+                        help='Tabular dataset to be used: adult, crime, images')
 
     args = parser.parse_args()
-
+    if args.dataset == 'adult':
+        no_avgs = 5
+        upper_alpha = 1.0
+        no_alphas = 10
+    elif args.dataset == 'images':
+        no_avgs = 3
+        upper_alpha = 0.9
+        no_alphas = 5
     lr_P = [0.001, 0.01, 0.1]
     lr_A = [0.001, 0.01, 0.1]
     batch = 128
-    alphas = np.linspace(start=0.1, stop=1.0, num=10)
+    alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
 
     data = defaultdict(lambda: defaultdict(list))
 
-    file_name = "data-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
+    file_name = args.dataset + "-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     if args.debias:
-        file_name = "data_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
+        file_name = args.dataset + "_debias-" + str(datetime.now()).replace(':', '-').replace(' ', '_') + ".json"
 
     for alpha in alphas:
         for p in lr_P:
@@ -358,23 +236,37 @@ if __name__ == "__main__":
 
                 key = str((p, a, batch, alpha))
 
-                for i in range(5):
+                for i in range(no_avgs):
                     args.predictor_lr = p
                     args.adversary_lr = a
                     args.batch_size = batch
                     args.alpha = alpha
 
-                    neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
+                    if args.dataset == 'adult':
+                        neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, predictor_acc = train(args.seed+i)
 
-                    data[key]["neg_fpr"].append(neg_fpr)
-                    data[key]["neg_fnr"].append(neg_fnr)
-                    data[key]["pos_fpr"].append(pos_fpr)
-                    data[key]["pos_fnr"].append(pos_fnr)
+                        data[key]["neg_fpr"].append(neg_fpr)
+                        data[key]["neg_fnr"].append(neg_fnr)
+                        data[key]["pos_fpr"].append(pos_fpr)
+                        data[key]["pos_fnr"].append(pos_fnr)
+                        data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
+                        data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
+                    elif args.dataset == 'images':
+                        neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, predictor_acc = train(args.seed+i)
+                        data[key]["neg_auc"].append(neg_auc)
+                        data[key]["pos_auc"].append(pos_auc)
+                        data[key]["avg_dif"].append(avg_dif)
+                        data[key]["avg_abs_dif"].append(avg_abs_dif)
+                        data[key]["neg_prec"].append(neg_prec)
+                        data[key]["neg_recall"].append(neg_recall)
+                        data[key]["neg_fscore"].append(neg_fscore)
+                        data[key]["neg_support"].append(neg_support)
+                        data[key]["neg_auc"].append(neg_auc)
+                        data[key]["pos_prec"].append(pos_prec)
+                        data[key]["pos_recall"].append(pos_recall)
+                        data[key]["pos_fscore"].append(pos_fscore)
+                        data[key]["pos_support"].append(pos_support)
                     data[key]["predictor_acc"].append(predictor_acc)
-
-
-                    data[key]["neg_confusion_mat"].append(neg_confusion_mat.tolist())
-                    data[key]["pos_confusion_mat"].append(pos_confusion_mat.tolist())
 
                 with open(file_name, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)

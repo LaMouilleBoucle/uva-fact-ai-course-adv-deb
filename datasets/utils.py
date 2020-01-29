@@ -10,9 +10,17 @@ from datasets.communities_crime_dataset import CommunitiesCrimeDataset
 from datasets.image_dataset import UTKFace
 
 
-def load_utkface(base_path, batch_size):
-    data_path = os.path.join(base_path, 'data/UTKFace')
+def get_utkface_dataloaders(base_path, batch_size):
+    """
+    Retrieves the train, validation and test dataloaders for the UTKFace dataset.
 
+    Args:
+        base_path (str): Home path of the repository
+        batch_size (int): Batch size for the dataloaders
+
+    Returns: (train dataloder, validation dataloader, test dataloader)
+    """
+    data_path = os.path.join(base_path, 'data/UTKFace')
     data = UTKFace(data_path, protected_vars=['sex'])
     train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data) * 0.6),
                                                                  len(data) - math.ceil(len(data) * 0.6)])
@@ -27,6 +35,15 @@ def load_utkface(base_path, batch_size):
 
 
 def load_communities_crime_dataset(base_path, batch_size):
+    """
+    Retrieves the train and test dataloaders for the Communities and Crime dataset.
+
+    Args:
+        base_path (str): Home path of the repository
+        batch_size (int): Batch size for the dataloaders
+
+    Returns: (train dataloder, test dataloader)
+    """
     cc_dataset = CommunitiesCrimeDataset(os.path.join(base_path,'data/'))
     end_of_train = int(0.7 * len(cc_dataset))
     train_dataset = Subset(cc_dataset, range(0, end_of_train))
@@ -39,9 +56,18 @@ def load_communities_crime_dataset(base_path, batch_size):
 
 
 def load_adult_dataset(base_path, batch_size):
+    """
+    Retrieves the train and test dataloaders for the Adult dataset.
+
+    Args:
+        base_path (str): Home path of the repository
+        batch_size (int): Batch size for the dataloaders
+
+    Returns: (train dataloder, test dataloader)
+    """
     train_path = os.path.join(base_path, 'data/adult.data')
     test_path = os.path.join(base_path, 'data/adult.test')
-    adult_dataset = AdultUCI([train_path, test_path], ['sex'])
+    adult_dataset = AdultUCI([train_path, test_path])
     end_of_train = int(0.7 * len(adult_dataset))
     min_max_scaler = MaxAbsScaler()
     adult_dataset.data[:end_of_train] = torch.tensor(min_max_scaler.fit_transform(adult_dataset.data[:end_of_train].numpy()))
@@ -56,12 +82,27 @@ def load_adult_dataset(base_path, batch_size):
 
 
 def get_dataloaders(batch_size, dataset):
+    """
+    Gets the relevant dataloaders based on the requested dataset. Validation dataloader is None for the Adult and
+    the Communities and Crime datasets.s
+
+    Args:
+        batch_size (int): Batch size for the dataloaders
+        dataset (str): The name of the dataset - one of {adult, crime, images}
+
+    Returns: (train dataloader, validation dataloader, test dataloader)
+    """
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     if dataset == 'images':
-        train_loader, val_loader, test_loader = load_utkface(base_path, batch_size)
+        train_loader, val_loader, test_loader = get_utkface_dataloaders(base_path, batch_size)
     elif dataset == 'adult':
         train_loader, test_loader = load_adult_dataset(base_path, batch_size)
         val_loader = None
     elif dataset == 'crime':
         train_loader, test_loader = load_communities_crime_dataset(base_path, batch_size)
+        val_loader = None
+    else:
+        raise Exception('Unsupported dataset')
+
     return train_loader, val_loader, test_loader
