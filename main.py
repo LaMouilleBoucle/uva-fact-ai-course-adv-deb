@@ -166,7 +166,10 @@ if __name__ == "__main__":
 
     # Set seed if given
     if args.seed:
+        np.random.seed(args.seed)
         torch.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     # Load data
     logger.info('Loading the dataset')
