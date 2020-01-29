@@ -1,10 +1,8 @@
 import torch
 
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_auc_score
-from collections import Counter
 
 
 def decayer(lr):
@@ -13,19 +11,19 @@ def decayer(lr):
     return new_lr
 
 
-def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset, train=False):
+def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optimizer_A, scheduler, device, dataset,
+                 train=False):
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
     # prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
-        
-            
+
         x = x.to(device)
         true_y_label = y.to(device)
         true_z_label = z.to(device)
-     
+
         # Forward step through predictor
         pred_y_logit, pred_y_prob = predictor(x)
 
@@ -87,7 +85,7 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
                 # Project gradients of the predictor
                 proj_grad = project_grad(grad_w_Lp, grad_w_La)
                 # Set alpha parameter
-                alpha = 0.1 # math.sqrt(decayer.step_count)
+                alpha = 0.1  # math.sqrt(decayer.step_count)
                 # Modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)
@@ -110,16 +108,21 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
 
 
 def concat_grad(model):
+    """
+    Concatenates the gradients of a model to form a single parameter vector tensor.
+
+    Args:
+        model (nn.Module): PyTorch model object
+
+    Returns: A single vector tensor with the model gradients concatenated
+    """
     g = None
     for name, param in model.named_parameters():
         grad = param.grad
         if "bias" in name:
             grad = grad.unsqueeze(dim=0)
         if g is None:
-            # print(name)
-            # print(param.grad.shape)
-            g = param.grad.view(1,-1)
-            # print(g.shape)
+            g = param.grad.view(1, -1)
         else:
             if len(grad.shape) < 2:
                 grad = grad.unsqueeze(dim=0)
@@ -130,6 +133,15 @@ def concat_grad(model):
 
 
 def replace_grad(model, grad):
+    """
+    Replace the gradients of the model with the specified gradient vector tensor
+
+    Args:
+        model (nn.Module): PyTorch model object
+        grad (Tensor): Vector of concatenated gradients
+
+    Returns: None
+    """
     start = 0
     for name, param in model.named_parameters():
         numel = param.numel()
@@ -138,25 +150,49 @@ def replace_grad(model, grad):
 
 
 def project_grad(x, v):
+    """
+    Performs a projection of one vector on another
+
+    Args:
+        x (Tensor): Vector to project
+        v (Tensor): Vector on which projection is required
+
+    Returns: Tensor containing the projected vector
+    """
     norm_v = v / (torch.norm(v) + torch.finfo(torch.float32).tiny)
     proj_grad = torch.dot(x, norm_v) * v
     return proj_grad
 
 
 def calculate_fpr(fp, tn):
+    """
+    Calculates false positive rate (FPR)
+
+    Args:
+        fp (int): Number of false positives
+        tn (int): Number of true negatives
+
+    Returns: False positive rate
+    """
     return fp / (fp + tn)
 
 
 def calculate_fnr(fn, tp):
+    """
+    Calculates false negative rate (FNR)
+
+    Args:
+        fn (int): Number of false negatives
+        tp (int): Number of true positives
+
+    Returns: False negative rate
+    """
     return fn / (fn + tp)
 
 
 def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_probs=None):
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
-    # print(true_labels.shape)
-    # print(predictions.shape)
-    # print(true_protected.shape)
 
     negative_indices = np.where(np.array(true_protected) == 0)[0]
     positive_indices = np.where(np.array(true_protected) == 1)[0]
@@ -180,15 +216,18 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
         protected_differences = neg_conditionals - pos_conditionals
         avg_dif = np.average(protected_differences, axis=1)
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
-        m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices], predictions[negative_indices])
-        w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices], predictions[positive_indices])
+        m_prec, m_recall, m_fscore, m_support = precision_recall_fscore_support(true_labels[negative_indices],
+                                                                                predictions[negative_indices])
+        w_prec, w_recall, w_fscore, w_support = precision_recall_fscore_support(true_labels[positive_indices],
+                                                                                predictions[positive_indices])
         if pred_probs is not None:
-            one_hot_labels = np.zeros((true_labels.size, true_labels.max()+1))
-            one_hot_labels[np.arange(true_labels.size),true_labels] = 1
+            one_hot_labels = np.zeros((true_labels.size, true_labels.max() + 1))
+            one_hot_labels[np.arange(true_labels.size), true_labels] = 1
             m_auc = roc_auc_score(one_hot_labels[negative_indices], pred_probs[negative_indices])
             w_auc = roc_auc_score(one_hot_labels[positive_indices], pred_probs[positive_indices])
 
         return m_prec, m_recall, m_fscore, m_support, m_auc, w_prec, w_recall, w_fscore, w_support, w_auc, avg_dif, avg_abs_dif
+
 
 def conditional_matrix(confusion_matrix):
     # y axis = true label
@@ -198,20 +237,21 @@ def conditional_matrix(confusion_matrix):
     conditional_matrix = np.divide(confusion_matrix, normalization)
     return conditional_matrix
 
+
 def plot_loss_acc(P, A=None, dataset='adult'):
     fig, axs = plt.subplots(4, 1)
-    axs[0].plot(np.arange(1, len(P[0])+1), P[0], label="Train loss predictor", color="#E74C3C")
-    #axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
+    axs[0].plot(np.arange(1, len(P[0]) + 1), P[0], label="Train loss predictor", color="#E74C3C")
+    # axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
 
-    axs[2].plot(np.arange(1, len(P[1])+1), P[1], label='Train accuracy predictor', color="#229954")
-    #axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies_P, label='Val accuracy predictor', color="#E67E22")
+    axs[2].plot(np.arange(1, len(P[1]) + 1), P[1], label='Train accuracy predictor', color="#229954")
+    # axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies_P, label='Val accuracy predictor', color="#E67E22")
 
     if A is not None:
-        axs[1].plot(np.arange(1, len(A[0])+1), A[0], label="Train loss adversary", color="#3498DB")
-        #axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
+        axs[1].plot(np.arange(1, len(A[0]) + 1), A[0], label="Train loss adversary", color="#3498DB")
+        # axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
 
-        axs[3].plot(np.arange(1, len(A[1])+1), A[1], label='Train accuracy adversary', color="#229954")
-        #axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
+        axs[3].plot(np.arange(1, len(A[1]) + 1), A[1], label='Train accuracy adversary', color="#229954")
+        # axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
 
     axs[0].set_xlabel('Epochs')
     axs[0].set_ylabel('Loss')
@@ -237,8 +277,7 @@ def plot_loss_acc(P, A=None, dataset='adult'):
     plt.savefig(title)
 
 
-
-def mutual_information(rv1, rv2, conditional_rv = None):
+def mutual_information(rv1, rv2, conditional_rv=None):
     pass
     # print(rv1)
     # print(rv2)
@@ -249,16 +288,9 @@ def mutual_information(rv1, rv2, conditional_rv = None):
     #     # calculate H(Z)
     #     # calculate H(Z|Y_hat)
 
-    
     #     print(Counter(rv1))
     #     total = 
 
     # else: 
     #     # calculate H(Z|Y)
     #     # calculate H(Z|Y_hat, Y)
-
-
-
-    
-
-
