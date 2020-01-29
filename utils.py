@@ -138,7 +138,7 @@ def concat_grad(model):
 
 def replace_grad(model, grad):
     """
-    Replace the gradients of the model with the specified gradient vector tensor
+    Replaces the gradients of the model with the specified gradient vector tensor.
 
     Args:
         model (nn.Module): PyTorch model object
@@ -155,7 +155,7 @@ def replace_grad(model, grad):
 
 def project_grad(x, v):
     """
-    Performs a projection of one vector on another
+    Performs a projection of one vector on another.
 
     Args:
         x (Tensor): Vector to project
@@ -170,7 +170,7 @@ def project_grad(x, v):
 
 def calculate_fpr(fp, tn):
     """
-    Calculates false positive rate (FPR)
+    Calculates false positive rate (FPR).
 
     Args:
         fp (int): Number of false positives
@@ -183,7 +183,7 @@ def calculate_fpr(fp, tn):
 
 def calculate_fnr(fn, tp):
     """
-    Calculates false negative rate (FNR)
+    Calculates false negative rate (FNR).
 
     Args:
         fn (int): Number of false negatives
@@ -281,7 +281,18 @@ def plot_loss_acc(P, A=None, dataset='adult'):
     plt.savefig(title)
 
 
-def entropy(rv1, cond_rv):
+def entropy(rv1, cond_rv = None):
+    """
+    Calculates either the entropy or conditional entropy depending on if a 
+    conditional random variable is given.
+
+    Args:
+        rv1 (list): List of samples from a random variable 
+        cond_rv (list): List of samples from a random variable
+
+    Returns: (conditional) entropy 
+    """
+    
     entropy = 0
 
     if cond_rv is None:
@@ -291,22 +302,39 @@ def entropy(rv1, cond_rv):
             entropy += prob * math.log(1 / prob, 2)
     else: 
         # Calculate entropy H(rv1 | cond_rv)
-        distr_rv1_conditioned = get_conditional_distr(rv1, cond_rv)
+        conditional_distr_rv1 = get_conditional_distr(rv1, cond_rv)
         distr_cond_rv = get_distr(cond_rv)
 
         for event, prob in distr_cond_rv.items(): 
             entropy_part = 0
-            for cond_prob in distr_rv1_conditioned[event].values(): 
+            for cond_prob in conditional_distr_rv1[event].values(): 
                 entropy_part += cond_prob * math.log(1 / cond_prob, 2)
             entropy += prob * entropy_part
     return entropy
 
 
 def get_joint(rv1, rv2): 
+    """
+    Gets all pairs of samples from the random variables that occur together.  
+
+    Args:
+        rv1 (list): List of samples from a random variable 
+        rv2 (list): List of samples from a random variable
+
+    Returns: list of tuples of all samples in rv1 and rv2 occurring together 
+    """
     return [i for i in zip(rv1, rv2)]
 
 
 def get_distr(rv): 
+    """
+    Calculates probabilties of the random variable rv.
+
+    Args:
+        rv (list): List of samples from a random variable 
+
+    Returns: dictionary of probabilties where the keys are the events of rv
+    """
 
     distr = {}
     for event, frequency in Counter(rv).items():
@@ -314,25 +342,47 @@ def get_distr(rv):
 
     return distr
 
-def get_conditional_distr(rv1, rv2): 
+def get_conditional_distr(rv, cond_rv): 
+    """
+    Calculates conditional probabilties of the random variable rv 
+    given another random variable cond_rv.
+
+    Args:
+        rv (list): List of samples from a random variable 
+        cond_rv (list): List of samples from a random variable 
+
+    Returns: dictionary of conditional probabilities where the first keys
+        are events of the conditional random variable and the second keys are 
+        events of the random variable 
+    """
 
     # Get joint distribution
-    distr_joint = get_distr(get_joint(rv1, rv2))
+    distr_joint = get_distr(get_joint(rv, cond_rv))
 
     # Get distribution of random variable we want to condition on 
-    distr_rv2 = get_distr(rv2)
+    distr_cond_rv = get_distr(cond_rv)
 
-    # Get distribution of random variable 1 conditioned of random variable 2
-    distr_cond = defaultdict(lambda: {})
+    # Get distribution of random variable given conditional random variable by Bayes rule 
+    conditional_distr = defaultdict(lambda: {})
     for event, prob in distr_joint.items():
+        conditional_distr[event[1]][event[0]] = prob / distr_cond_rv[event[1]]
 
-        distr_cond[event[1]][event[0]] = prob / distr_rv2[event[1]]
-
-    return distr_cond
+    return conditional_distr
 
 
 
 def mutual_information(rv1, rv2, cond_rv = None):
+    """
+    Calculates mutual information between random variables rv1 and rv2 eventually 
+    conditioned on another random variable cond_rv if given.
+
+    Args:
+        rv1 (list): List of samples from a random variable 
+        rv2 (list): List of samples from a random variable 
+        cond_rv (list): List of samples from a random variable
+
+    Returns: mutual information
+    """
 
     mutual_information = None
 
@@ -357,10 +407,4 @@ def mutual_information(rv1, rv2, cond_rv = None):
         # # Compute mutual information I(rv1; rv2 | cond_rv)
         mutual_information = entropy1 - entropy2
 
-    
-    print("MUTUAL INFORMATION", mutual_information)
     return mutual_information
-
-
-    
-
