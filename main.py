@@ -121,7 +121,7 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, debia
         test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
             predictor, adversary, criterion, device, dataset)
         if dataset != 'crime':
-            mutual_info = utils.mutual_information(protected_test_dict["true"], labels_test_dict['true'], labels_test_dict['pred'])
+            mutual_info = utils.mutual_information(protected_test_dict["true"], labels_test_dict['pred'], labels_test_dict['true'])
 
     test_score_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
     logger.info('Predictor score [test] = {}'.format(test_score_P))
