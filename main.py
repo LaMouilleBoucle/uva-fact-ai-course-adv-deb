@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys 
 
 import coloredlogs
 
@@ -106,7 +107,10 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         torch.save(adversary.state_dict(), args.save_model_to + "adv_seed_" + str(args.seed))
 
 
-def test(dataloader_test, predictor, adversary, criterion, metric, device, debias, dataset):
+def test(dataloader_test, predictor, adversary, criterion, metric, device, debias, dataset, log=True):
+    if not log:
+        logging.disable(sys.maxsize)
+
     # Print the model parameters
     logger.info('Learned model parameters: ')
     for name, param in predictor.named_parameters():
@@ -143,6 +147,8 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, debia
     else:
         logger.info('Generating conditional plot')
         utils.make_coplot(protected_test_dict, labels_test_dict)
+
+    return test_score_P, neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, mutual_info
 
 
 if __name__ == "__main__":
@@ -207,12 +213,9 @@ if __name__ == "__main__":
     # Initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
     utils.decayer.step_count = 1
-    if args.debias:
-        optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_P, gamma=0.96)
-    else:
-        optimizer_A = None
-        scheduler = None
+
+    optimizer_A = torch.optim.Adam(adversary.parameters(), lr=args.adversary_lr) if args.debias else None
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_P, gamma=0.96) if args.debias else None 
 
     # Setup the loss function
     if args.dataset == 'crime':
