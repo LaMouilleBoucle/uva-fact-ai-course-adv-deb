@@ -149,13 +149,18 @@ def train(seed):
         logger.info('Name: {}, value: {}'.format(name, param))
 
     # run the model on the test set after training
+
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
+        if dataloader_val is not None:
+            dataloader_to_pass = dataloader_val
+        else:
+            dataloader_to_pass = dataloader_test
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_to_pass,
                                                                                                             predictor, 
                                                                                                             adversary, 
                                                                                                             criterion, 
                                                                                                             device, 
-                                                                                                            dataset)
+                                                                                                            args.dataset)
 
 
     test_accuracy_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
@@ -221,7 +226,7 @@ if __name__ == "__main__":
         upper_alpha = 0.9
         no_alphas = 5
     lr_P = [0.001] # [0.001, 0.01, 0.1]
-    lr_P = [0.001] # [0.001, 0.01, 0.1]
+    lr_A = [0.001] # [0.001, 0.01, 0.1]
 
     batch = 128
     alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
