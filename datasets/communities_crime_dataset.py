@@ -15,9 +15,9 @@ class CommunitiesCrimeDataset(Dataset):
                                names=self.attributes, skipinitialspace=True, na_values=["?"])
         csv_data = csv_data.drop(columns=['communityname', 'state', 'county', 'community', 'fold'])
         csv_data = csv_data.fillna(csv_data.mean())
-        self.ground_truth = torch.tensor(csv_data['ViolentCrimesPerPop'].values)
-        self.protected = torch.tensor(csv_data['racePctWhite'])
-        self.data = torch.tensor(csv_data.drop(columns=['ViolentCrimesPerPop']).values)
+        self.ground_truth = torch.tensor(csv_data['ViolentCrimesPerPop'].values).float().unsqueeze(dim=1)
+        self.protected = torch.tensor(csv_data['racePctWhite']).float().unsqueeze(dim=1)
+        self.data = torch.tensor(csv_data.drop(columns=['ViolentCrimesPerPop']).values).float()
 
     def __len__(self):
         return self.data.shape[0]

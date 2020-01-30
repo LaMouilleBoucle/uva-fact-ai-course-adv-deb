@@ -9,8 +9,7 @@ import torch.nn as nn
 
 import numpy as np
 
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import accuracy_score, mean_squared_error
 
 import datasets.utils
 import utils
@@ -42,14 +41,14 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
 
-        # Store train accuracy of predictor after every epoch
+        # Store train performance of predictor after every epoch
         train_score_P = metric(labels_train_dict['true'], labels_train_dict['pred'])
         logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
                     'predictor score [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P),
                                                               train_score_P))
         train_scores_P.append(train_score_P)
 
-        # Store train accuracy of adversary after every epoch, if applicable
+        # Store train performance of adversary after every epoch, if applicable
         if args.debias:
             av_train_losses_A.append(np.mean(train_losses_A))
             train_score_A = metric(protected_train_dict['true'], protected_train_dict['pred'])
@@ -62,9 +61,9 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         if args.val:
             with torch.no_grad():
                 # Forward pass of full validation set
-                val_losses_P, val_losses_A, labels_val_dict, protected_val_dict = \
+                val_losses_P, val_losses_A, labels_val_dict, protected_val_dict, _ = \
                     utils.forward_full(dataloader_val, predictor, optimizer_P, criterion, adversary, optimizer_A,
-                                       scheduler, device)
+                                       scheduler, device, args.dataset)
 
             # Store average validation losses of predictor after every epoch
             av_val_losses_P.append(np.mean(val_losses_P))
@@ -77,19 +76,25 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
 
             if args.debias:
                 val_score_A = metric(protected_val_dict['true'], protected_val_dict['pred'])
-                logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
-                            'predictor score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P),
+                logger.info('Epoch {}/{}: adversary loss [val] = {:.3f}, '
+                            'adversary score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_A),
                                                                     val_score_A))
 
     logger.info('Finished training')
 
-    # Plot accuracy and loss curves
+    # Plot learning curves
     logger.info('Generating plots')
-    utils.plot_loss_acc((av_train_losses_P, train_scores_P), (av_train_losses_A, train_scores_A), args.dataset)
+    utils.plot_loss_acc((av_train_losses_P, train_scores_P, av_val_losses_P, val_scores_P),
+                        (av_train_losses_A, train_scores_A, av_val_losses_A, val_scores_A),
+                        args.dataset)
 
+    if args.dataset == 'crime':
+        utils.make_coplot(protected_val_dict, labels_val_dict)
+
+    # Save model
     os.makedirs(args.save_model_to, exist_ok=True)
     torch.save(predictor.state_dict(), args.save_model_to + "pred_biased_"+str(args.debias)+"_"+str(args.dataset)+"_seed_"+str(args.seed))
-    if args.debias: 
+    if args.debias:
         torch.save(predictor.state_dict(), args.save_model_to + "adv_seed_"+str(args.seed))
 
 
@@ -129,6 +134,8 @@ def test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, 
         logger.info(f'For women: precision {w_prec}, recall {w_recall}, F1 {w_fscore}, support {w_support}, AUC {w_auc}.')
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
         logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
+    else:
+        utils.make_coplot(protected_test_dict, labels_test_dict)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -141,19 +148,15 @@ if __name__ == "__main__":
                         help='predictor learning rate')
     parser.add_argument('--adversary_lr', type=float, default=0.001,
                         help='adversary learning rate')
-    # parser.add_argument('--eval_freq', type=int, default=100,
-    #                     help='Frequency of evaluation on the validation set')
-    # parser.add_argument('--print_every', type=int, default=100,
-    #                     help='number of iterations after which the training progress is printed')
     parser.add_argument('--debias', action='store_true',
                         help='Use the adversarial network to mitigate unwanted bias')
     parser.add_argument('--val', action="store_true",
                         help='Use a validation set during training')
     parser.add_argument('--dataset', type=str, default='adult',
-                        help='Tabular dataset to be used: adult, crime, images')
+                        help='Dataset to be used: adult, crime, images')
     parser.add_argument('--seed', type=int, default=None,
                         help='Train with a fixed seed')
-    parser.add_argument('--save_model_to', type=str, default="saved_models/", 
+    parser.add_argument('--save_model_to', type=str, default="saved_models/",
                         help='Output path for saved model')
 
 
@@ -165,9 +168,9 @@ if __name__ == "__main__":
     logger.info('Using device {}'.format(device))
 
     # Set seed if given
-    if args.seed: 
+    if args.seed:
         torch.manual_seed(args.seed)
-  
+
     # Load data
     logger.info('Loading the dataset')
 
@@ -212,4 +215,4 @@ if __name__ == "__main__":
 
     train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler,
           device)
-    test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler, device)
+    #test(dataloader_test, predictor, optimizer_P, criterion, metric, adversary, optimizer_A, scheduler, device)

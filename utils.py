@@ -20,12 +20,12 @@ def forward_full(dataloader, predictor, optimizer_P, criterion, adversary, optim
     # prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
-        
-            
+
+
         x = x.to(device)
         true_y_label = y.to(device)
         true_z_label = z.to(device)
-     
+
         # Forward step through predictor
         pred_y_logit, pred_y_prob = predictor(x)
         if train is False:
@@ -197,20 +197,26 @@ def conditional_matrix(confusion_matrix):
     conditional_matrix = np.divide(confusion_matrix, normalization)
     return conditional_matrix
 
+
 def plot_loss_acc(P, A=None, dataset='adult'):
+    if dataset == 'adult':
+        metric =  'accuracy'
+    else:
+        metric = 'MSE'
+
     fig, axs = plt.subplots(4, 1)
     axs[0].plot(np.arange(1, len(P[0])+1), P[0], label="Train loss predictor", color="#E74C3C")
-    #axs[0].plot(np.arange(1, args.n_epochs +1), av_val_losses_P, label="Val loss predictor", color="#8E44AD")
+    axs[0].plot(np.arange(1, len(P[2])+1), P[2], label="Val loss predictor", color="#8E44AD")
 
-    axs[2].plot(np.arange(1, len(P[1])+1), P[1], label='Train accuracy predictor', color="#229954")
-    #axs[2].plot(np.arange(1, args.n_epochs + 1), val_accuracies_P, label='Val accuracy predictor', color="#E67E22")
+    axs[2].plot(np.arange(1, len(P[1])+1), P[1], label=str('Train %s predictor'%(metric)), color="#229954")
+    axs[2].plot(np.arange(1, len(P[3])+1), P[3], label=str('Val %s predictor'%(metric)), color="#E67E22")
 
     if A is not None:
         axs[1].plot(np.arange(1, len(A[0])+1), A[0], label="Train loss adversary", color="#3498DB")
-        #axs[1].plot(np.arange(1, args.n_epochs +1), av_val_losses_A, label="Val loss adversary", color="#FFC300")
+        axs[1].plot(np.arange(1, len(A[2])+1), A[2], label="Val loss adversary", color="#FFC300")
 
-        axs[3].plot(np.arange(1, len(A[1])+1), A[1], label='Train accuracy adversary', color="#229954")
-        #axs[3].plot(np.arange(1, args.n_epochs + 1), val_accuracies_A, label='Val accuracy adversary', color="#E67E22")
+        axs[3].plot(np.arange(1, len(A[1])+1), A[1], label=str('Train %s adversary'%(metric)), color="#229954")
+        axs[3].plot(np.arange(1, len(A[3])+1), A[3], label=str('Val %s adversary'%(metric)), color="#E67E22")
 
     axs[0].set_xlabel('Epochs')
     axs[0].set_ylabel('Loss')
@@ -221,16 +227,48 @@ def plot_loss_acc(P, A=None, dataset='adult'):
     axs[1].legend(loc="upper right")
 
     axs[2].set_xlabel('Epochs')
-    axs[2].set_ylabel('Accuracy')
+    axs[2].set_ylabel('Accuracy') if dataset == 'adult' else axs[2].set_ylabel('MSE')
     axs[2].legend(loc="upper right")
 
     axs[3].set_xlabel('Epochs')
-    axs[3].set_ylabel('Accuracy')
+    axs[3].set_ylabel('Accuracy') if dataset == 'adult' else axs[3].set_ylabel('MSE')
     axs[3].legend(loc="upper right")
 
     plt.tight_layout()
-    if A is None:
+    if A[0] == A:
         title = f'train_{dataset}_no_debias.png'
     else:
         title = f'train_{dataset}_debias.png'
     plt.savefig(title)
+
+def make_coplot(protected_dict, labels_dict):
+    plt.figure()
+
+    ratios = np.array(protected_dict['true'])
+    true_crime_rates = np.array(labels_dict['true'])
+    pred_crime_rates = np.array(labels_dict['pred'])
+    bin_width = 0.2
+    for l_edge in np.arange(0, 1, bin_width):
+        # Bin samples based on ratio of white people in the community
+        r_edge = l_edge + bin_width
+        bin = str('%.1f < z <= %.1f' %(l_edge, r_edge))
+
+        idcs = np.where((l_edge < ratios) & (ratios <= r_edge))[0]
+        # Sort samples within bin based on their true targets,
+        # for clean visualisation
+        s = sorted(zip(true_crime_rates[idcs], pred_crime_rates[idcs]))
+        x, y = map(np.array, zip(*s))
+
+        # Plot datapoins in bin, and (linearly) fit line to them
+        points = plt.plot(x, y, '.', alpha=0.42, label=bin)
+        a, b = np.polyfit(x.flatten(), y.flatten(), 1)
+        fitted_line = [a*i + b for i in x]
+        plt.plot(x, fitted_line, color = points[0].get_color())
+
+    plt.plot([0,1], [0,1], 'k--', label='perfect predictor')
+    plt.xlabel('True crime rate')
+    plt.ylabel('Predicted crime rate')
+    plt.title('Predicted and true crime rates for different values of z,\n\
+               the ratio of white people within the community')
+    plt.legend(loc='lower right', ncol=1)
+    plt.show()
