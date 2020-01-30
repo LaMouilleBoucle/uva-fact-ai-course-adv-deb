@@ -4,6 +4,12 @@ import numpy as np
 
 
 class ToyDataset(data.Dataset):
+    """
+    Toy dataset as described in Zhang et al., Mitigating Unwanted Biases with Adversarial Learning
+
+    Args:
+        n_examples (int): Number of examples to generate
+    """
 
     def __init__(self, n_examples):
         self.n_examples = n_examples
