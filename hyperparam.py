@@ -95,7 +95,7 @@ def train(seed):
                                                                                                      scheduler,
                                                                                                      device,
                                                                                                      args.dataset,
-                                                                                                     train=True)
+                                                                                                     train=True, alpha=args.alpha)
 
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
@@ -149,7 +149,7 @@ def train(seed):
 
     # run the model on the test set after training
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
                                                                                                  predictor, optimizer_P,
                                                                                                  criterion, adversary,
                                                                                                  optimizer_A, scheduler,
@@ -255,17 +255,10 @@ if __name__ == "__main__":
                         neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, predictor_acc = train(args.seed+i)
                         data[key]["neg_auc"].append(neg_auc)
                         data[key]["pos_auc"].append(pos_auc)
-                        data[key]["avg_dif"].append(avg_dif)
-                        data[key]["avg_abs_dif"].append(avg_abs_dif)
-                        data[key]["neg_prec"].append(neg_prec)
-                        data[key]["neg_recall"].append(neg_recall)
-                        data[key]["neg_fscore"].append(neg_fscore)
-                        data[key]["neg_support"].append(neg_support)
-                        data[key]["neg_auc"].append(neg_auc)
-                        data[key]["pos_prec"].append(pos_prec)
-                        data[key]["pos_recall"].append(pos_recall)
-                        data[key]["pos_fscore"].append(pos_fscore)
-                        data[key]["pos_support"].append(pos_support)
+                        data[key]["avg_dif"].append(avg_dif.tolist())
+                        data[key]["avg_abs_dif"].append(avg_abs_dif.tolist())
+                        data[key]["neg_support"].append(neg_support.tolist())
+                        data[key]["pos_support"].append(pos_support.tolist())
                     data[key]["predictor_acc"].append(predictor_acc)
 
                 with open(file_name, 'w', encoding='utf-8') as f:
