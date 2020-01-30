@@ -88,14 +88,15 @@ def train(seed):
         # Forward (and backward when train=True) pass of the full train set
         train_losses_P, train_losses_A, labels_train_dict, protected_train_dict = utils.forward_full(dataloader_train,
                                                                                                      predictor,
-                                                                                                     optimizer_P,
-                                                                                                     criterion,
                                                                                                      adversary,
-                                                                                                     optimizer_A,
-                                                                                                     scheduler,
+                                                                                                     criterion,
                                                                                                      device,
                                                                                                      args.dataset,
-                                                                                                     train=True, alpha=args.alpha)
+                                                                                                     optimizer_P,
+                                                                                                     optimizer_A,
+                                                                                                     scheduler,
+                                                                                                     train=True,
+                                                                                                     alpha=args.alpha)
 
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
@@ -150,10 +151,11 @@ def train(seed):
     # run the model on the test set after training
     with torch.no_grad():
         test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
-                                                                                                 predictor, optimizer_P,
-                                                                                                 criterion, adversary,
-                                                                                                 optimizer_A, scheduler,
-                                                                                                 device, args.dataset)
+                                                                                                            predictor, 
+                                                                                                            adversary, 
+                                                                                                            criterion, 
+                                                                                                            device, 
+                                                                                                            dataset)
 
 
     test_accuracy_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
@@ -218,8 +220,9 @@ if __name__ == "__main__":
         no_avgs = 3
         upper_alpha = 0.9
         no_alphas = 5
-    lr_P = [0.001, 0.01, 0.1]
-    lr_A = [0.001, 0.01, 0.1]
+    lr_P = [0.001] # [0.001, 0.01, 0.1]
+    lr_P = [0.001] # [0.001, 0.01, 0.1]
+
     batch = 128
     alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
 
