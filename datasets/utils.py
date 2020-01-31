@@ -13,7 +13,7 @@ from datasets.communities_crime_dataset import CommunitiesCrimeDataset
 from datasets.image_dataset import UTKFace
 
 
-def get_utkface_dataloaders(base_path, batch_size):
+def get_utkface_dataloaders(base_path, batch_size, test_indices=None):
     """
     Retrieves the train, validation and test dataloaders for the UTKFace dataset.
 
@@ -43,7 +43,10 @@ def get_utkface_dataloaders(base_path, batch_size):
             pickle.dump([train_data.indices, val_data.indices, test_data.indices][no], file)
     
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    if test_indices is None:
+        test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    else:
+        test_loader = DataLoader(Subset(data, test_indices), batch_size=batch_size, shuffle=False, num_workers=2)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
     return train_loader, val_loader, test_loader
