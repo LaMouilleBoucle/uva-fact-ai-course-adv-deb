@@ -108,7 +108,7 @@ python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_
 ### Authors
 - Vanessa Botha, *10754954* - vanessa.botha@student.uva.nl
 - Nithin Holla, *12166804* - nithin.holla@student.uva.nl
-- Azamat Omuraliev, *2057398* - azamat.omuraiev@student.uva.nl
+- Azamat Omuraliev, *12057398* - azamat.omuraiev@student.uva.nl
 - Leila Talha, *10756922* - leila.talha@student.uva.nl
 
 ### Acknowledgements
