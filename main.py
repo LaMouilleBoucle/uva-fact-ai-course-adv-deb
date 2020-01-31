@@ -22,7 +22,7 @@ coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - 
 
 
 def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, metric, adversary, optimizer_A,
-          scheduler, device, config):
+          scheduler, alpha, device, config):
     """
     Performs training of the models
 
@@ -36,6 +36,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         adversary (nn.Module): Adversary model
         optimizer_A (Optimizer): Optimizer for the adversary
         scheduler (func): Scheduler for the learning rate
+        alpha (float): Alpha hyperparameter for adversarial training
         device (torch.device): Device to train on
         config (dict): Dictionary containing number of epochs ('n_epochs'), whether to use the validation set ('val'),
         whether to debias ('debias'), the dataset name ('dataset_name')
@@ -58,7 +59,8 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
                                                                                                      optimizer_P,
                                                                                                      optimizer_A,
                                                                                                      scheduler,
-                                                                                                     train=True)
+                                                                                                     train=True,
+                                                                                                     alpha=alpha)
 
 
         # Store average training losses of predictor after every epoch
@@ -206,6 +208,8 @@ if __name__ == "__main__":
                         help='Output path for saved model')
     parser.add_argument('--lr_scheduler', choices=['exp', 'lambda'], default='exp',
                         help='Learning rate scheduler to use')
+    parser.add_argument('--alpha', type=float, default=0.3,
+                        help='Value of alpha for the adversarial training')
 
     args = parser.parse_args()
 
@@ -265,7 +269,7 @@ if __name__ == "__main__":
 
     # Train the models
     train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion,
-            metric, adversary, optimizer_A, scheduler, device, args)
+            metric, adversary, optimizer_A, scheduler, args.alpha, device, args)
 
     # Test the models
     test(dataloader_test, predictor, adversary, criterion, metric, device, args.dataset_name)
