@@ -118,7 +118,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
     utils.plot_learning_curves((av_train_losses_P, train_scores_P, av_val_losses_P, val_scores_P),
                                (av_train_losses_A, train_scores_A, av_val_losses_A, val_scores_A),
                                config.dataset_name)
-    if config.dataset_name == 'crime':
+    if config.dataset_name == 'crime' and config.val:
         utils.make_coplot(protected_val_dict, labels_val_dict)
 
     os.makedirs(config.save_model_to, exist_ok=True)
