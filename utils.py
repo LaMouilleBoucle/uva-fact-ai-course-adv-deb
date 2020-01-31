@@ -195,6 +195,20 @@ def calculate_fnr(fn, tp):
 
 
 def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_probs=None):
+    """
+    Calculate reporting metrics per experiment.
+    Args:
+        true_labels (list)
+        predictions (list)
+        true_protected (list)
+        dataset (str)
+        pred_probs (list)
+    Returns:
+        Set of FPR, FNR metrics and confusion matrix for UCI Adult dataset
+        OR
+        Set of precision, recall, F1, support, AUC metrics and difference in conditional probabilities for UTKFace experiment
+    """
+
     true_labels = np.array(true_labels)
     predictions = np.array(predictions)
 
@@ -214,10 +228,13 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
 
         return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
     elif dataset == 'images':
+
         # 0 is male, so negative = male; positive = female
+
         neg_conditionals = conditional_matrix(neg_confusion_mat)
         pos_conditionals = conditional_matrix(pos_confusion_mat)
         protected_differences = neg_conditionals - pos_conditionals
+        # difference between conditionals measures the degree to which equality of odds is satisfied
         avg_dif = np.average(protected_differences, axis=1)
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
         neg_prec, neg_recall, neg_fscore, neg_support = precision_recall_fscore_support(true_labels[negative_indices],
@@ -234,9 +251,16 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
 
 
 def conditional_matrix(confusion_matrix):
-    # y axis = true label
-    # x axis = pred label
-    # p(y_hat| y) = p(y_hat, y) / p(y)
+    """
+    Computes a matrix of conditional probabilities based on the following formula:
+    p(y_hat| y) = p(y_hat, y) / p(y)
+    
+    Args:
+        confusion_matrix(np.array), where y axis = true label, x axis = pred label
+
+    Returns:
+        conditional_matrix (np.array)
+    """
     normalization = np.expand_dims(np.sum(confusion_matrix, axis=1), axis=1)
     conditional_matrix = np.divide(confusion_matrix, normalization)
     return conditional_matrix
