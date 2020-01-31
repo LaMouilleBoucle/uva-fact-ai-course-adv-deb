@@ -28,7 +28,7 @@ def get_utkface_dataloaders(base_path, batch_size):
         # Download dataset if not present
         url = 'https://drive.google.com/uc?id=0BxYys69jI14kYVM3aVhKS1VhRUk'
         out = os.path.join(base_path, 'data/UTKFace.tar.gz')
-        gdown.download(url, out)
+        gdown.download(url, out, quiet=False, proxy=None)
         with tarfile.open(out, "r:gz") as tar_ref:
             tar_ref.extractall(os.path.join(base_path, 'data'))
 

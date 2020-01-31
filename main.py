@@ -178,6 +178,7 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, datas
         logger.info(f'Positive protected variable (women): precision {pos_prec}, recall {pos_recall}, F1 {pos_fscore}, support {pos_support}, AUC {pos_auc}.')
         logger.info(f'Average difference between conditional probabilities: {avg_dif}')
         logger.info(f'Average absolute difference between conditional probabilities: {avg_abs_dif}')
+        return test_score_P, neg_auc, pos_auc
 
     elif dataset_name == 'crime':
         logger.info('Generating conditional plot')
