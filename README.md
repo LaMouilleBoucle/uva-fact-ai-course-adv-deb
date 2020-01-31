@@ -29,19 +29,62 @@ To deactivate the environment, use:
 conda deactivate
 ```
 
-To run view the notebook with our experimental results, run:
+To view the notebook with our experimental results, run:
 ```bash
 jupyter notebook data_analysis.ipynb
 ```
 
 ### Running the experiments
-\\ Explain how to run train.py with different settings for each dataset.
+New experiments can be conducted using the main.py file. The dataset to be used can be specified by passing it as an argument on the command line. Other arguments are:
+
+```bash
+OUTPUT FOR THE ARGS
+```
+
+Not all of these are relevant or appropriate for the different datasets. Below you will find commands for running an experiment on a specific dataset, including arguments specific to it, with the default settings.
 
 #### UCI Adult dataset
+The UCI adult dataset is the default data for doing the debiasing experiments. To train and test without debiasing, run: 
+```bash
+python main.py 
+```
 
-#### UTKFace dataset
+To debias, run:
+```bash
+python main.py --debias
+```
+
+To replicate the results presented in the notebook, run:
+```bash
+python main.py --batch_size 128 --predictor_lr 0.1 --n_epochs 10
+python main.py --debias --batch_size 128 --predictor_lr 0.01 --adversary_lr 0.001 --n_epochs 30
+```
 
 #### UCI Communities and Crime dataset
+To train, validate and test on the UCI Communities and Crime dataset, run:
+
+```bash
+python main.py --dataset crime --val
+```
+
+To replicate the results presented in the notebook, run:
+```bash
+python main.py --dataset crime --n_epochs 50
+python main.py --dataset crime --debias --batch_size 64 --predictor_lr 0.002 --adversary_lr 0.005 --n_epochs 210
+```
+
+#### UTKFace dataset
+The UTKFace set is not present in the data folder of this repository. The data is downloaded and placed into the right local folder when experimenting with it for the first time. To train, validate and test on the UTK Face dataset, run:
+
+```bash
+python main.py --dataset face --val
+```
+
+To replicate the results presented in the notebook, run:
+```bash
+python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --n_epochs 30
+python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30
+```
 
 ### Authors
 - Vanessa Botha - [*VanessaBotha*](https://github.com/VanessaBotha)
@@ -50,5 +93,7 @@ jupyter notebook data_analysis.ipynb
 - Leila Talha - [*LaMouilleBoucle*](https://github.com/LaMouilleBoucle)
 
 ### Acknowledgements
+We would like to express great appreciation to IBM for releasing the [AI Fairness 360 toolkit](https://github.com/IBM/AIF360) that has been of inspiration to us, when parameter settings required to reproduce results were not mentioned by Zhang and colleagues. In addition we are grateful for the datasets made publicly available by UCI and [susanqq](https://github.com/susanqq). Finally we would like thank Leon Lang for providing us with advice and feedback and for swiftly responding to our e-mails, answering our questios.
+
 \\ Include IBM team here, as they were a source of inspiration?
 \\ UCI/UTK for the datasets or better as reference?
