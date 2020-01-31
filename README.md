@@ -1,4 +1,4 @@
-## FACT in AI, University of Amsterdam 2020
+### FACT in AI, University of Amsterdam 2020
 
 Fairness, Accountability, Confidentiality and Fairness in AI is a master's course at the UvA.
 In the context thereof an attempt is made at reproducing a paper on fairness, namely
@@ -68,9 +68,9 @@ optional arguments:
 Some of the arguments listed above might be irrelevant for some experimental set-ups or inappropriate for some data. Below you will find commands for running an experiment withe the default settings on a specific dataset, including arguments specific to it. Commands for reproducing the results presented in the notebook are also provided.
 
 #### UCI Adult dataset
-The UCI adult dataset is the default data for doing the debiasing experiments. To train and test without debiasing, run: 
+The UCI adult dataset is the default data for doing the debiasing experiments. To train and test without debiasing, run:
 ```bash
-python main.py 
+python main.py
 ```
 
 To debias, run:
@@ -101,13 +101,13 @@ python main.py --dataset_name crime --debias --batch_size 64 --predictor_lr 0.00
 The UTKFace set is not present in the data folder of this repository. The data is downloaded and placed into the right local folder when experimenting with it for the first time. To train, validate and test on the UTK Face dataset, run:
 
 ```bash
-python main.py --dataset_name face --val
+python main.py --dataset_name images --val
 ```
 
 To replicate our results, run:
 ```bash
-python main.py --dataset_name face --batch_size 128 --predictor_lr 0.001 --n_epochs 30
-python main.py --dataset_name face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30 --alpha 0.1
+python main.py --dataset_name images --batch_size 128 --predictor_lr 0.001 --n_epochs 30
+python main.py --dataset_name images --batch_size 128 --debias --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30 --alpha 0.1
 ```
 
 ### Authors
