@@ -137,6 +137,9 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, debia
         logger.info('FPR: {}, FNR: {}'.format(neg_fpr, neg_fnr))
         logger.info('Confusion matrix for the positive protected label: \n{}'.format(pos_confusion_mat))
         logger.info('FPR: {}, FNR: {}'.format(pos_fpr, pos_fnr))
+
+        return test_score_P, neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, mutual_info
+
     elif dataset == 'images':
         neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif = utils.calculate_metrics(
             labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], dataset, pred_probs=pred_y_prob)
@@ -148,7 +151,11 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, debia
         logger.info('Generating conditional plot')
         utils.make_coplot(protected_test_dict, labels_test_dict)
 
-    return test_score_P, neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr, mutual_info
+        return test_score_P
+
+
+        
+        
 
 
 if __name__ == "__main__":

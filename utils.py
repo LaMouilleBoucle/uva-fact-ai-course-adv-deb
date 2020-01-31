@@ -42,13 +42,13 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
             labels_dict['true'].extend(torch.max(true_y_label, dim=1)[1].cpu().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].cpu().numpy().tolist())
         elif dataset == 'adult':
-            labels_dict['true'].extend(y.squeeze().numpy().tolist())
+            labels_dict['true'].extend(y.squeeze().cpu().numpy().tolist())
             pred_y = (pred_y_prob > 0.5).int().squeeze(dim=1).cpu().numpy().tolist()
             labels_dict['pred'].extend(pred_y)
         else:
-            labels_dict['true'].extend(y.numpy().tolist())
-            labels_dict['pred'].extend(pred_y_prob.detach().numpy().tolist())
-        protected_dict['true'].extend(z.squeeze().numpy().tolist())
+            labels_dict['true'].extend(y.cpu().numpy().tolist())
+            labels_dict['pred'].extend(pred_y_prob.detach().cpu().numpy().tolist())
+        protected_dict['true'].extend(z.squeeze().cpu().numpy().tolist())
 
         if adversary is not None:
             # Forward step through adversary
@@ -395,8 +395,8 @@ def get_conditional_distr(rv, cond_rv):
 
     # Get distribution of random variable given conditional random variable by Bayes rule
     conditional_distr = defaultdict(lambda: {})
-    for event, prob in distr_joint.items():
-        conditional_distr[event[1]][event[0]] = prob / distr_cond_rv[event[1]]
+    for event, joint_prob in distr_joint.items():
+        conditional_distr[event[1]][event[0]] = joint_prob / distr_cond_rv[event[1]]
 
     return conditional_distr
 
