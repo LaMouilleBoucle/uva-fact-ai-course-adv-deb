@@ -9,53 +9,51 @@ from torchvision import transforms
 
 
 class UTKFace(Dataset):
+    """
+    UTKFace dataset from https://susanqq.github.io/UTKFace/. 
+    Pre-processing of the data includes resizing of images, and binning and binarization of age. 
+    The protected variable is sex.
+
+
+    Args:
+        directory (list of str): File path to the folder containing images
+        protected_vars (list): list of strings of protected variable names  
+    """
+
     def __init__(self, directory, protected_vars):
         self.samples = []
         self.vars = {'sex': [], 'race': []}
         self.labels = []
         self.protected_var_names = protected_vars
+        
+        # We resize the input from 200x200 to 100x100
         self.transform = transforms.Compose([transforms.Resize(100), transforms.ToTensor()])
         skipped = 0
+
         for idx, imgdir in enumerate(os.listdir(directory)):
             if len(imgdir.split('_')) < 4:
+                # Some images are skipped if they meet any of the categorical features
                 skipped += 1
                 continue
+            # Instead of storing the images we store the paths to them and retrieve when calling a batch
             self.samples.append(directory + '/' + imgdir)
             self.labels.append(int(imgdir.split('_')[0]))
             self.vars['sex'].append(int(imgdir.split('_')[1]))
             self.vars['race'].append(int(imgdir.split('_')[2]))
         print(f'Skipped {skipped} images.')
 
+
         _, self.labels = self.one_hot_encode(pd.cut(self.labels,
                                                     bins=[0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 120],
                                                     # labels=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65],
                                                     right=True))
-        # Count number of people per age category
-        # print(self.labels.value_counts())
-        # Count number of men vs women 
-        # print(f"{self.vars['sex'].count(0)} men.")
-        # print(f"{self.vars['sex'].count(1)} women.")
-        # Count racial ratios
-        # print(f"{self.vars['race'].count(0)} white people.")
-        # print(f"{self.vars['race'].count(1)} black people.")
-        # print(f"{self.vars['race'].count(2)} asian people.")
-        # print(f"{self.vars['race'].count(3)} indian people.")
-        # print(f"{self.vars['race'].count(4)} other people.")
 
         self.labels = torch.tensor(self.labels).float()
 
         for no, var in enumerate(self.vars):
             if var in self.protected_var_names:
                 # 0 is male
-
                 self.protected_vars = torch.tensor([value == 0 for value in self.vars[var]]).float().unsqueeze(dim=1)
-
-        #         _, temp = self.one_hot_encode(self.vars[var])
-        #         if no == 0:
-        #             varS = temp
-        #         else:
-        #             varS = np.append(varS, temp, axis=1)
-        # self.protected_vars = torch.tensor(varS).float()
 
     def one_hot_encode(self, data):
         encoder = LabelEncoder().fit(data)
