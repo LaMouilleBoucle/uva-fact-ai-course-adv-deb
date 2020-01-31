@@ -152,7 +152,7 @@ def train(seed):
 
     with torch.no_grad():
         if dataloader_val is not None:
-            dataloader_to_pass = dataloader_val
+            dataloader_to_pass = dataloader_test
         else:
             dataloader_to_pass = dataloader_test
         test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_to_pass,
@@ -228,8 +228,10 @@ if __name__ == "__main__":
     lr_P = [0.001] # [0.001, 0.01, 0.1]
     lr_A = [0.001] # [0.001, 0.01, 0.1]
 
+
     batch = 128
-    alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
+    # alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
+    alphas = [0.1]
 
     data = defaultdict(lambda: defaultdict(list))
 
