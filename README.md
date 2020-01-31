@@ -101,13 +101,13 @@ python main.py --dataset_name crime --debias --batch_size 64 --predictor_lr 0.00
 The UTKFace set is not present in the data folder of this repository. The data is downloaded and placed into the right local folder when experimenting with it for the first time. To train, validate and test on the UTK Face dataset, run:
 
 ```bash
-python main.py --dataset face --val
+python main.py --dataset_name face --val
 ```
 
 To replicate our results, run:
 ```bash
-python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --n_epochs 30
-python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30 --alpha 0.1
+python main.py --dataset_name face --batch_size 128 --predictor_lr 0.001 --n_epochs 30
+python main.py --dataset_name face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30 --alpha 0.1
 ```
 
 ### Authors
