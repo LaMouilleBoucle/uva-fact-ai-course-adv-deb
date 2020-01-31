@@ -106,10 +106,10 @@ python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_
 ```
 
 ### Authors
-- Vanessa Botha - [*VanessaBotha*](https://github.com/VanessaBotha)
-- Nithin Holla - [*Nithin-Holla*](https://github.com/Nithin-Holla)
-- Azamat Omuraliev - [*AzamatOmu*](https://github.com/AzamatOmu)
-- Leila Talha - [*LaMouilleBoucle*](https://github.com/LaMouilleBoucle)
+- [Vanessa Botha](https://github.com/VanessaBotha)Vanessa Botha, *10754954* - vanessa.botha@student.uva.nl
+- [Nithin Holla](https://github.com/Nithin-Holla) Nithin Holla, *12166804* - nithin.holla@student.uva.nl
+- [Azamat Omuraliev](https://github.com/AzamatOmu)Azamat Omuraliev, *2057398* - azamat.omuraiev@student.uva.nl
+- [Leila Talha](https://github.com/LaMouilleBoucle) Leila Talha, *10756922* - leila.talha@student.uva.nl
 
 ### Acknowledgements
 We would like to express great appreciation to IBM for releasing the [AI Fairness 360 toolkit](https://github.com/IBM/AIF360) that has been of inspiration to us, when parameter settings required to reproduce results were not mentioned by Zhang and colleagues. In addition we are grateful for the datasets made publicly available by UCI and [susanqq](https://github.com/susanqq). Finally we would like thank Leon Lang for providing us with advice and feedback and for swiftly responding to our e-mails, answering our questios.
