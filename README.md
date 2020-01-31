@@ -31,17 +31,36 @@ conda deactivate
 
 To view the notebook with our experimental results, run:
 ```bash
-jupyter notebook data_analysis.ipynb
+jupyter notebook NAME_NOTEBOOK.ipynb
 ```
 
 ### Running the experiments
-New experiments can be conducted using the main.py file. The dataset to be used can be specified by passing it as an argument on the command line. Other arguments are:
+New experiments can be conducted using the main.py file. The dataset to be used can be specified by passing it as an argument on the command line. The usage of the file is specified as follows:
 
 ```bash
-OUTPUT FOR THE ARGS
+usage: main.py [-h] [--n_epochs N_EPOCHS] [--batch_size BATCH_SIZE]
+               [--predictor_lr PREDICTOR_LR] [--adversary_lr ADVERSARY_LR]
+               [--debias] [--val] [--dataset DATASET] [--seed SEED]
+               [--save_model_to SAVE_MODEL_TO]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --n_epochs N_EPOCHS   number of epochs
+  --batch_size BATCH_SIZE
+                        batch size
+  --predictor_lr PREDICTOR_LR
+                        predictor learning rate
+  --adversary_lr ADVERSARY_LR
+                        adversary learning rate
+  --debias              Use the adversarial network to mitigate unwanted bias
+  --val                 Use a validation set during training
+  --dataset DATASET     Tabular dataset to be used: adult, crime, images
+  --seed SEED           Train with a fixed seed
+  --save_model_to SAVE_MODEL_TO
+                        Output path for saved model
 ```
 
-Not all of these are relevant or appropriate for the different datasets. Below you will find commands for running an experiment on a specific dataset, including arguments specific to it, with the default settings.
+Some of the arguments listed above might be irrelevant for some experimental set-ups or inappropriate for some data. Below you will find commands for running an experiment withe the default settings on a specific dataset, including arguments specific to it. Commands for reproducing the results presented in NAME_NOTEBOOK.ipynb are also provided.
 
 #### UCI Adult dataset
 The UCI adult dataset is the default data for doing the debiasing experiments. To train and test without debiasing, run: 
@@ -94,6 +113,3 @@ python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_
 
 ### Acknowledgements
 We would like to express great appreciation to IBM for releasing the [AI Fairness 360 toolkit](https://github.com/IBM/AIF360) that has been of inspiration to us, when parameter settings required to reproduce results were not mentioned by Zhang and colleagues. In addition we are grateful for the datasets made publicly available by UCI and [susanqq](https://github.com/susanqq). Finally we would like thank Leon Lang for providing us with advice and feedback and for swiftly responding to our e-mails, answering our questios.
-
-\\ Include IBM team here, as they were a source of inspiration?
-\\ UCI/UTK for the datasets or better as reference?
