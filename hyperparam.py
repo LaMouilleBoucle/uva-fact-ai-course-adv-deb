@@ -152,7 +152,7 @@ def train(seed):
 
     with torch.no_grad():
         if dataloader_val is not None:
-            dataloader_to_pass = dataloader_test
+            dataloader_to_pass = dataloader_val
         else:
             dataloader_to_pass = dataloader_test
         test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_to_pass,

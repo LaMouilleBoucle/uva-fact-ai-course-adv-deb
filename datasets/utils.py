@@ -1,6 +1,8 @@
 import math
 import os
 import torch
+import gdown
+import tarfile
 
 from torch.utils.data import DataLoader, Subset
 from sklearn.preprocessing import MaxAbsScaler
@@ -21,6 +23,15 @@ def get_utkface_dataloaders(base_path, batch_size):
     Returns: (train dataloder, validation dataloader, test dataloader)
     """
     data_path = os.path.join(base_path, 'data/UTKFace')
+
+    if not os.path.isdir(data_path):
+        # Download dataset if not present
+        url = 'https://drive.google.com/uc?id=0BxYys69jI14kYVM3aVhKS1VhRUk'
+        out = os.path.join(base_path, 'data/UTKFace.tar.gz')
+        gdown.download(url, out)
+        with tarfile.open(out, "r:gz") as tar_ref:
+            tar_ref.extractall(os.path.join(base_path, 'data'))
+
     data = UTKFace(data_path, protected_vars=['sex'])
     train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data) * 0.6),
                                                                  len(data) - math.ceil(len(data) * 0.6)])
