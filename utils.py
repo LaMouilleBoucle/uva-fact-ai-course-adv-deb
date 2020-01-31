@@ -314,6 +314,97 @@ def make_coplot(protected_dict, labels_dict):
     plt.legend(loc='lower right', ncol=1)
     plt.show()
 
+def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, pos_fnr_db, neg_fpr_db, pos_fpr_db):
+    """ 
+    Plots the FNR and FPR rates for male and female in the biased and debiased setting 
+    Args:
+        neg_fnr_b (list): list of fnr for female in the biased setting
+        pos_fnr_b (list): list of fnr for male in the biased setting
+        neg_fpr_b (list): list of fpr for female in the biased setting
+        pos_fpr_b (list): list of fpr for male in the biased setting
+        neg_fnr_db (list): list of fnr for female in the debiased setting
+        pos_fnr_db (list): list of fnr for male in the debiased setting
+        neg_fpr_db (list): list of fpr for female in the debiased setting
+        pos_fpr_db (list): list of fpr for male in the debiased setting
+
+    Returns: None
+    """
+    # Layout
+    plt.style.use('seaborn-whitegrid')
+    new_style = {'grid': False}
+    plt.rc('axes', **new_style)
+    
+    # Set distances
+    bar_width = 0.25
+    r1 = [0, 0.7]
+    r2 = [x + bar_width for x in r1]
+
+    fig, axs = plt.subplots(1, 2, figsize=(7, 4))
+
+    # Plot results FNR
+    women_mean_fnr = (np.mean(neg_fnr_b), np.mean(neg_fnr_db))
+    men_mean_fnr = (np.mean(pos_fnr_b), np.mean(pos_fnr_db))
+    women_std_fnr = (np.std(neg_fnr_b), np.std(neg_fnr_db))
+    men_std_fnr = (np.std(pos_fnr_b), np.std(pos_fnr_db))
+
+    # Plot standard deviations if mulitple results available
+    if len(neg_fnr_b) > 1:
+        axs[0].bar(r1, women_mean_fnr, color='#FF00B2', width=bar_width, yerr=women_std_fnr, 
+                    error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
+                    edgecolor='white', label='Women')
+        axs[0].bar(r2, men_mean_fnr, color='#0097FF', width=bar_width, yerr=men_std_fnr, 
+                    error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
+                    edgecolor='white', label='Men')
+    else:
+        axs[0].bar(r1, women_mean_fnr, color='#FF00B2', width=bar_width, edgecolor='white', label='Female')
+        axs[0].bar(r2, men_mean_fnr, color='#0097FF', width=bar_width, edgecolor='white', label='Male')  
+        
+        
+    
+    # Plot FNR results Zhang et al
+    axs[0].plot([r1[0]-0.5*bar_width +0.005, r1[0]+0.5*bar_width], [0.4492, 0.4492], "k:", lw=2, label="Zhang et al. (2018)")
+    axs[0].plot([r1[1]-0.5*bar_width +0.005, r1[1]+0.5*bar_width], [0.4458, 0.4458], "k:", lw=2)
+    axs[0].plot([r2[0]-0.5*bar_width +0.005, r2[0]+0.5*bar_width], [0.3667, 0.3667], "k:", lw=2)
+    axs[0].plot([r2[1]-0.5*bar_width +0.005, r2[1]+0.5*bar_width], [0.4349, 0.4349], "k:", lw=2)
+
+    axs[0].set_xlabel('FNR', fontsize=12)
+    axs[0].set_xticks([r + bar_width/2 for r in r1])
+    axs[0].set_xticklabels(['Without debias', 'With debias'], fontsize=12)
+    axs[0].set_ylabel('Rate', fontsize=12)
+
+    # plot results FPR
+    women_mean_fpr = (np.mean(neg_fpr_b), np.mean(neg_fpr_db))
+    men_mean_fpr = (np.mean(pos_fpr_b), np.mean(pos_fpr_db))
+    women_std_fpr = (np.std(neg_fpr_b), np.std(neg_fpr_db))
+    men_std_fpr = (np.std(pos_fpr_b), np.std(pos_fpr_db))
+
+    # Plot standard deviations if mulitple results available
+    if len(neg_fnr_b) > 1: 
+        axs[1].bar(r1, women_mean_fpr, color='#FF00B2', width=bar_width, yerr=women_std_fpr, 
+                    error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
+                    edgecolor='white', label='Female')
+        axs[1].bar(r2, men_mean_fpr, color='#0097FF', width=bar_width, yerr=men_std_fpr, 
+                    error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
+                    edgecolor='white', label='Male')
+    else:
+        axs[1].bar(r1, women_mean_fpr, color='#FF00B2', width=bar_width, edgecolor='white', label='Female')
+        axs[1].bar(r2, men_mean_fpr, color='#0097FF', width=bar_width, yerr=men_std_fpr, edgecolor='white', label='Male')
+
+
+    # Plot FPR results Zhang et al
+    axs[1].plot([r1[0]-0.5*bar_width +0.005, r1[0]+0.5*bar_width], [0.0248, 0.0248],"k:", lw=2, label="Zhang et al.")
+    axs[1].plot([r1[1]-0.5*bar_width +0.005, r1[1]+0.5*bar_width], [0.0647, 0.0647], "k:", lw=2)
+    axs[1].plot([r2[0]-0.5*bar_width +0.005, r2[0]+0.5*bar_width], [0.0917, 0.0917], "k:", lw=2)
+    axs[1].plot([r2[1]-0.5*bar_width +0.005, r2[1]+0.5*bar_width], [0.0701, 0.0701], "k:", lw=2)
+
+
+    axs[1].set_xlabel('FPR', fontsize=12)
+    axs[1].set_xticks([r + bar_width/2 for r in r1])
+    axs[1].set_xticklabels(['Without debias', 'With debias'], fontsize=12)
+    axs[1].legend(loc="upper right", fontsize=12)
+    plt.tight_layout()
+
+
 def entropy(rv1, cond_rv = None):
     """
     Calculates either the entropy or conditional entropy depending on if a
