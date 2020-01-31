@@ -22,11 +22,11 @@ coloredlogs.install(logger=logger, level='DEBUG', fmt='%(asctime)s - %(name)s - 
 
 
 def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, metric, adversary, optimizer_A,
-          scheduler, device):
+          scheduler, device, config):
     av_train_losses_P, av_train_losses_A, av_val_losses_P, av_val_losses_A = [], [], [], []
     train_scores_P, train_scores_A, val_scores_P, val_scores_A = [], [], [], []
 
-    for epoch in range(args.n_epochs):
+    for epoch in range(config.n_epochs):
 
         # Forward (and backward when train=True) pass of the full train set
         train_losses_P, train_losses_A, labels_train_dict, protected_train_dict = utils.forward_full(dataloader_train,
@@ -34,7 +34,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
                                                                                                      adversary,
                                                                                                      criterion,
                                                                                                      device,
-                                                                                                     args.dataset,
+                                                                                                     config.dataset,
                                                                                                      optimizer_P,
                                                                                                      optimizer_A,
                                                                                                      scheduler,
@@ -47,21 +47,21 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         # Store train accuracy of predictor after every epoch
         train_score_P = metric(labels_train_dict['true'], labels_train_dict['pred'])
         logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
-                    'predictor score [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_P),
+                    'predictor score [train] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(train_losses_P),
                                                               train_score_P))
         train_scores_P.append(train_score_P)
 
         # Store train accuracy of adversary after every epoch, if applicable
-        if args.debias:
+        if config.debias:
             av_train_losses_A.append(np.mean(train_losses_A))
             train_score_A = metric(protected_train_dict['true'], protected_train_dict['pred'])
             logger.info('Epoch {}/{}: adversary loss [train] = {:.3f}, '
-                        'adversary score [train] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(train_losses_A),
+                        'adversary score [train] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(train_losses_A),
                                                                   train_score_A))
             train_scores_A.append(train_score_A)
 
         # Evaluate on validation set after every epoch, if applicable
-        if args.val and dataloader_val is not None:
+        if config.val and dataloader_val is not None:
             with torch.no_grad():
                 # Forward pass of full validation set
                 val_losses_P, val_losses_A, labels_val_dict, protected_val_dict, _ = utils.forward_full(dataloader_val,
@@ -69,7 +69,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
                                                                                                         adversary,
                                                                                                         criterion,
                                                                                                         device,
-                                                                                                        args.dataset,
+                                                                                                        config.dataset,
                                                                                                         optimizer_P,
                                                                                                         optimizer_A,
                                                                                                         scheduler)
@@ -80,13 +80,13 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
             # Store train accuracy of predictor after every epoch
             val_score_P = metric(labels_val_dict['true'], labels_val_dict['pred'])
             logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
-                        'predictor score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_P),
+                        'predictor score [val] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(val_losses_P),
                                                                 val_score_P))
 
-            if args.debias:
+            if config.debias:
                 val_score_A = metric(protected_val_dict['true'], protected_val_dict['pred'])
                 logger.info('Epoch {}/{}: adversary loss [val] = {:.3f}, '
-                            'adversary score [val] = {:.3f}'.format(epoch + 1, args.n_epochs, np.mean(val_losses_A),
+                            'adversary score [val] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(val_losses_A),
                                                                     val_score_A))
 
     logger.info('Finished training')
@@ -95,20 +95,20 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
     logger.info('Generating plots')
     utils.plot_learning_curves((av_train_losses_P, train_scores_P, av_val_losses_P, val_scores_P),
                                (av_train_losses_A, train_scores_A, av_val_losses_A, val_scores_A),
-                               args.dataset)
-    if args.dataset == 'crime':
+                               config.dataset)
+    if config.dataset == 'crime':
         utils.make_coplot(protected_val_dict, labels_val_dict)
 
-    os.makedirs(args.save_model_to, exist_ok=True)
+    os.makedirs(config.save_model_to, exist_ok=True)
     torch.save(predictor.state_dict(),
-               args.save_model_to + "pred_debiased_" + str(args.debias) + "_" + str(args.dataset) + "_seed_" + str(
-                   args.seed))
-    if args.debias:
-        torch.save(adversary.state_dict(), args.save_model_to + "adv_seed_" + str(args.seed))
+               config.save_model_to + "pred_debiased_" + str(config.debias) + "_" + str(config.dataset) + "_seed_" + str(
+                   config.seed))
+    if config.debias:
+        torch.save(adversary.state_dict(), config.save_model_to + "adv_seed_" + str(config.seed))
 
 
-def test(dataloader_test, predictor, adversary, criterion, metric, device, debias, dataset, log=True):
-    if not log:
+def test(dataloader_test, predictor, adversary, criterion, metric, device, dataset, show_logs=True):
+    if not show_logs:
         logging.disable(sys.maxsize)
 
     # Print the model parameters
@@ -152,10 +152,6 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, debia
         utils.make_coplot(protected_test_dict, labels_test_dict)
 
         return test_score_P
-
-
-        
-        
 
 
 if __name__ == "__main__":
@@ -234,6 +230,6 @@ if __name__ == "__main__":
         metric = accuracy_score
 
     train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion,
-            metric, adversary, optimizer_A, scheduler, device)
+            metric, adversary, optimizer_A, scheduler, device, args)
 
-    test(dataloader_test, predictor, adversary, criterion, metric, device, args.debias, args.dataset)
+    test(dataloader_test, predictor, adversary, criterion, metric, device, args.dataset)
