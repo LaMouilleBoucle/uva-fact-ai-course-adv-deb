@@ -9,15 +9,42 @@ from collections import defaultdict
 
 
 def decayer(lr):
+    """
+    Return a decayed learning rate based on the step counter
+
+    Args:
+        lr (float): Learning rate
+
+    Returns: New learning rate which is decayed
+
+    """
     new_lr = lr / decayer.step_count
-    decayer.step_count += 1
     return new_lr
 
-def forward_full(dataloader, predictor, adversary, criterion, device, dataset, optimizer_P=None, optimizer_A=None, scheduler=None, train=False, alpha=0.3):
+
+def forward_full(dataloader, predictor, adversary, criterion, device, dataset_name, optimizer_P=None, optimizer_A=None, scheduler=None, train=False, alpha=0.3):
+    """
+    Performs one epoch of training/evaluation on the data
+
+    Args:
+        dataloader (DataLoader): Dataloader for the data
+        predictor (nn.Module): Predictor model
+        adversary (nn.Module): Adversary model
+        criterion (func): Loss criterion
+        device (torch.device): Device on which to train/evaluate
+        dataset_name (str): Name of the dataset
+        optimizer_P (Optimizer): Optimizer for the predictor
+        optimizer_A (Optimizer): Optimizer for the adversary
+        scheduler (func): Learning rate scheduler
+        train (bool): True for training mode, False for evaluation
+        alpha (float): Value of hyperparameter alpha
+
+    Returns: Metrics from training/evaluation
+
+    """
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
-    # prediction_probs = []
 
     for i, (x, y, z) in enumerate(dataloader):
 
@@ -38,10 +65,10 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
         loss_P = criterion(pred_y_prob, true_y_label)
         losses_P.append(loss_P.item())
 
-        if dataset == 'images':
+        if dataset_name == 'images':
             labels_dict['true'].extend(torch.max(true_y_label, dim=1)[1].cpu().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].cpu().numpy().tolist())
-        elif dataset == 'adult':
+        elif dataset_name == 'adult':
             labels_dict['true'].extend(y.squeeze().cpu().numpy().tolist())
             pred_y = (pred_y_prob > 0.5).int().squeeze(dim=1).cpu().numpy().tolist()
             labels_dict['pred'].extend(pred_y)
@@ -58,7 +85,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
             loss_A = criterion(pred_z_prob, true_z_label)
             losses_A.append(loss_A.item())
 
-            if dataset == 'crime':
+            if dataset_name == 'crime':
                 pred_z = pred_z_prob.detach().numpy().tolist()
             else:
                 pred_z = (pred_z_prob > 0.5).float().squeeze(dim=1).cpu().numpy().tolist()
@@ -84,11 +111,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
                 # Concatenate gradients of predictor loss with respect to the predictor
                 grad_w_Lp = concat_grad(predictor)
                 # Project gradients of the predictor
-                if dataset == 'images': 
-                    alpha = 0.1
                 proj_grad = project_grad(grad_w_Lp, grad_w_La)
-                # Set alpha parameter
-                # alpha = 0.3 # math.sqrt(decayer.step_count)
                 # Modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)
@@ -268,7 +291,7 @@ def conditional_matrix(confusion_matrix):
 
 def plot_learning_curves(P, A, dataset='adult'):
     if dataset == 'crime':
-        metric =  'MSE'
+        metric = 'MSE'
     else:
         metric = 'accuracy'
 
@@ -308,6 +331,7 @@ def plot_learning_curves(P, A, dataset='adult'):
         title = f'train_{dataset}_debias.png'
     plt.savefig(title)
 
+
 def make_coplot(protected_dict, labels_dict):
     plt.figure()
 
@@ -339,6 +363,7 @@ def make_coplot(protected_dict, labels_dict):
                the ratio of white people within the community')
     plt.legend(loc='lower right', ncol=1)
     plt.show()
+
 
 def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, pos_fnr_db, neg_fpr_db, pos_fpr_db):
     """ 
@@ -417,13 +442,11 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
         axs[1].bar(r1, women_mean_fpr, color='#FF00B2', width=bar_width, edgecolor='white', label='Female')
         axs[1].bar(r2, men_mean_fpr, color='#0097FF', width=bar_width, yerr=men_std_fpr, edgecolor='white', label='Male')
 
-
     # Plot FPR results Zhang et al
     axs[1].plot([r1[0]-0.5*bar_width +0.005, r1[0]+0.5*bar_width], [0.0248, 0.0248],"k:", lw=2, label="Zhang et al.")
     axs[1].plot([r1[1]-0.5*bar_width +0.005, r1[1]+0.5*bar_width], [0.0647, 0.0647], "k:", lw=2)
     axs[1].plot([r2[0]-0.5*bar_width +0.005, r2[0]+0.5*bar_width], [0.0917, 0.0917], "k:", lw=2)
     axs[1].plot([r2[1]-0.5*bar_width +0.005, r2[1]+0.5*bar_width], [0.0701, 0.0701], "k:", lw=2)
-
 
     axs[1].set_xlabel('FPR', fontsize=12)
     axs[1].set_xticks([r + bar_width/2 for r in r1])
@@ -432,7 +455,7 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
     plt.tight_layout()
 
 
-def entropy(rv1, cond_rv = None):
+def entropy(rv1, cond_rv=None):
     """
     Calculates either the entropy or conditional entropy depending on if a
     conditional random variable is given.
@@ -492,6 +515,7 @@ def get_distr(rv):
 
     return distr
 
+
 def get_conditional_distr(rv, cond_rv):
     """
     Calculates conditional probabilties of the random variable rv
@@ -519,7 +543,8 @@ def get_conditional_distr(rv, cond_rv):
 
     return conditional_distr
 
-def mutual_information(rv1, rv2, cond_rv = None):
+
+def mutual_information(rv1, rv2, cond_rv=None):
     """
     Calculates mutual information between random variables rv1 and rv2 eventually
     conditioned on another random variable cond_rv if given.
