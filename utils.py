@@ -93,12 +93,13 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
 
             # Update predictor weights
             optimizer_P.step()
-            decayer.step_count += 1
-
+            
             if adversary is not None:
                 # Decay the learning rate
+                decayer.step_count += 1
                 if decayer.step_count % 1000 == 0:
                     scheduler.step()
+
                 # Update adversary params
                 optimizer_A.step()
 
