@@ -84,6 +84,8 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
                 # Concatenate gradients of predictor loss with respect to the predictor
                 grad_w_Lp = concat_grad(predictor)
                 # Project gradients of the predictor
+                if dataset == 'images': 
+                    alpha = 0.1
                 proj_grad = project_grad(grad_w_Lp, grad_w_La)
                 # Set alpha parameter
                 # alpha = 0.3 # math.sqrt(decayer.step_count)
