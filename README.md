@@ -40,8 +40,9 @@ New experiments can be conducted using the main.py file. The dataset to be used 
 ```bash
 usage: main.py [-h] [--n_epochs N_EPOCHS] [--batch_size BATCH_SIZE]
                [--predictor_lr PREDICTOR_LR] [--adversary_lr ADVERSARY_LR]
-               [--debias] [--val] [--dataset DATASET] [--seed SEED]
-               [--save_model_to SAVE_MODEL_TO]
+               [--debias] [--val] [--dataset_name DATASET_NAME] [--seed SEED]
+               [--save_model_to SAVE_MODEL_TO] [--lr_scheduler {exp,lambda}]
+               [--alpha ALPHA]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -54,10 +55,14 @@ optional arguments:
                         adversary learning rate
   --debias              Use the adversarial network to mitigate unwanted bias
   --val                 Use a validation set during training
-  --dataset DATASET     Tabular dataset to be used: adult, crime, images
+  --dataset_name DATASET_NAME
+                        Tabular dataset to be used: adult, crime, images
   --seed SEED           Train with a fixed seed
   --save_model_to SAVE_MODEL_TO
                         Output path for saved model
+  --lr_scheduler {exp,lambda}
+                        Learning rate scheduler to use
+  --alpha ALPHA         Value of alpha for the adversarial training
 ```
 
 Some of the arguments listed above might be irrelevant for some experimental set-ups or inappropriate for some data. Below you will find commands for running an experiment withe the default settings on a specific dataset, including arguments specific to it. Commands for reproducing the results presented in the notebook are also provided.
@@ -76,20 +81,20 @@ python main.py --debias
 To replicate our results, run:
 ```bash
 python main.py --batch_size 128 --predictor_lr 0.1 --n_epochs 10
-python main.py --debias --batch_size 128 --predictor_lr 0.01 --adversary_lr 0.001 --n_epochs 30
+python main.py --debias --batch_size 128 --predictor_lr 0.01 --adversary_lr 0.001 --n_epochs 30 --alpha 0.3
 ```
 
 #### UCI Communities and Crime dataset
 To train, validate and test on the UCI Communities and Crime dataset, run:
 
 ```bash
-python main.py --dataset crime --val
+python main.py --dataset_name crime --val
 ```
 
 To replicate our results, run:
 ```bash
-python main.py --dataset crime --n_epochs 50
-python main.py --dataset crime --debias --batch_size 64 --predictor_lr 0.002 --adversary_lr 0.005 --n_epochs 210
+python main.py --dataset_name crime --n_epochs 50
+python main.py --dataset_name crime --debias --batch_size 64 --predictor_lr 0.002 --adversary_lr 0.005 --n_epochs 210 --alpha 1
 ```
 
 #### UTKFace dataset
@@ -102,7 +107,7 @@ python main.py --dataset face --val
 To replicate our results, run:
 ```bash
 python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --n_epochs 30
-python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30
+python main.py --dataset face --batch_size 128 --predictor_lr 0.001 --adversary_lr 0.001 --n_epochs 30 --alpha 0.1
 ```
 
 ### Authors
