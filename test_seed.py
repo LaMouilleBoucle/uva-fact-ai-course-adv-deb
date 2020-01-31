@@ -33,6 +33,18 @@ print(next(iter(dataloader_test))[0])
 
 pred_biased_filename = "pred_debiased_False_images_seed_40"
 pred_debiased_filename = "pred_debiased_True_images_seed_40"
+input_dim = next(iter(dataloader_test))[0].shape[1]
+output_dim = next(iter(dataloader_test))[1].shape[1]
+
+# Load the biased model 
+predictor_biased = ImagePredictor(input_dim, output_dim).to(DEVICE)
+predictor_biased.load_state_dict(torch.load(os.path.join(MODEL_DIR, pred_biased_filename), map_location=DEVICE))
+predictor_biased.eval();
+
+# Load the debiased model
+predictor_debiased = ImagePredictor(input_dim, output_dim).to(DEVICE)
+predictor_debiased.load_state_dict(torch.load(os.path.join(MODEL_DIR, pred_debiased_filename), map_location=DEVICE))
+predictor_debiased.eval();
 
 # Results biased predictor
 accuracy_b, neg_auc_b, pos_auc_b = test(dataloader_test, 
