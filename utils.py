@@ -329,6 +329,7 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
 
     Returns: None
     """
+    
     # Layout
     plt.style.use('seaborn-whitegrid')
     new_style = {'grid': False}
