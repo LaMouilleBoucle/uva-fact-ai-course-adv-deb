@@ -13,7 +13,7 @@ def decayer(lr):
     decayer.step_count += 1
     return new_lr
 
-def forward_full(dataloader, predictor, adversary, criterion, device, dataset, optimizer_P=None, optimizer_A=None, scheduler=None, train=False):
+def forward_full(dataloader, predictor, adversary, criterion, device, dataset, optimizer_P=None, optimizer_A=None, scheduler=None, train=False, alpha=0.3):
     labels_dict = {'true': [], 'pred': []}
     protected_dict = {'true': [], 'pred': []}
     losses_P, losses_A = [], []
@@ -86,7 +86,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset, o
                 # Project gradients of the predictor
                 proj_grad = project_grad(grad_w_Lp, grad_w_La)
                 # Set alpha parameter
-                alpha = 0.3 # math.sqrt(decayer.step_count)
+                # alpha = 0.3 # math.sqrt(decayer.step_count)
                 # Modify and replace the gradient of the predictor
                 grad_w_Lp = grad_w_Lp - proj_grad - alpha * grad_w_La
                 replace_grad(predictor, grad_w_Lp)

@@ -76,13 +76,20 @@ class Adversary(nn.Module):
         input_dim (int): Number of input dimensions
         protected_dim (int): Number of dimensions for the protected variable
     """
-    def __init__(self, input_dim, protected_dim):
+    def __init__(self, input_dim, protected_dim, equality_of_odds=True):
         super(Adversary, self).__init__()
         self.c = nn.Parameter(torch.ones(1 * protected_dim))
-        self.w2 = nn.init.xavier_uniform_(nn.Parameter(torch.empty(3 * input_dim, 1 * protected_dim)))
+        if equality_of_odds: 
+            self.no_targets = 3
+        else:
+            self.no_targets = 1
+        self.w2 = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.no_targets * input_dim, 1 * protected_dim)))
         self.b = nn.Parameter(torch.zeros(1 * protected_dim))
 
     def forward(self, logits, targets):
         s = torch.sigmoid((1 + torch.abs(self.c)) * logits)
-        z_hat = torch.cat((s, s * targets, s * (1 - targets)), dim=1) @ self.w2 + self.b
+        if self.no_targets == 3:
+            z_hat = torch.cat((s, s * targets, s * (1 - targets)), dim=1) @ self.w2 + self.b
+        else:
+            z_hat = s @ self.w2 + self.b
         return z_hat, torch.sigmoid(z_hat)

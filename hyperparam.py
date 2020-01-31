@@ -88,14 +88,15 @@ def train(seed):
         # Forward (and backward when train=True) pass of the full train set
         train_losses_P, train_losses_A, labels_train_dict, protected_train_dict = utils.forward_full(dataloader_train,
                                                                                                      predictor,
-                                                                                                     optimizer_P,
-                                                                                                     criterion,
                                                                                                      adversary,
-                                                                                                     optimizer_A,
-                                                                                                     scheduler,
+                                                                                                     criterion,
                                                                                                      device,
                                                                                                      args.dataset,
-                                                                                                     train=True)
+                                                                                                     optimizer_P,
+                                                                                                     optimizer_A,
+                                                                                                     scheduler,
+                                                                                                     train=True,
+                                                                                                     alpha=args.alpha)
 
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
@@ -148,12 +149,18 @@ def train(seed):
         logger.info('Name: {}, value: {}'.format(name, param))
 
     # run the model on the test set after training
+
     with torch.no_grad():
-        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob, mutual_info = utils.forward_full(dataloader_test,
-                                                                                                 predictor, optimizer_P,
-                                                                                                 criterion, adversary,
-                                                                                                 optimizer_A, scheduler,
-                                                                                                 device, args.dataset)
+        if dataloader_val is not None:
+            dataloader_to_pass = dataloader_val
+        else:
+            dataloader_to_pass = dataloader_test
+        test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_to_pass,
+                                                                                                            predictor, 
+                                                                                                            adversary, 
+                                                                                                            criterion, 
+                                                                                                            device, 
+                                                                                                            args.dataset)
 
 
     test_accuracy_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
@@ -218,8 +225,9 @@ if __name__ == "__main__":
         no_avgs = 3
         upper_alpha = 0.9
         no_alphas = 5
-    lr_P = [0.001, 0.01, 0.1]
-    lr_A = [0.001, 0.01, 0.1]
+    lr_P = [0.001] # [0.001, 0.01, 0.1]
+    lr_A = [0.001] # [0.001, 0.01, 0.1]
+
     batch = 128
     alphas = np.linspace(start=0.1, stop=upper_alpha, num=no_alphas)
 
@@ -255,17 +263,10 @@ if __name__ == "__main__":
                         neg_prec, neg_recall, neg_fscore, neg_support, neg_auc, pos_prec, pos_recall, pos_fscore, pos_support, pos_auc, avg_dif, avg_abs_dif, predictor_acc = train(args.seed+i)
                         data[key]["neg_auc"].append(neg_auc)
                         data[key]["pos_auc"].append(pos_auc)
-                        data[key]["avg_dif"].append(avg_dif)
-                        data[key]["avg_abs_dif"].append(avg_abs_dif)
-                        data[key]["neg_prec"].append(neg_prec)
-                        data[key]["neg_recall"].append(neg_recall)
-                        data[key]["neg_fscore"].append(neg_fscore)
-                        data[key]["neg_support"].append(neg_support)
-                        data[key]["neg_auc"].append(neg_auc)
-                        data[key]["pos_prec"].append(pos_prec)
-                        data[key]["pos_recall"].append(pos_recall)
-                        data[key]["pos_fscore"].append(pos_fscore)
-                        data[key]["pos_support"].append(pos_support)
+                        data[key]["avg_dif"].append(avg_dif.tolist())
+                        data[key]["avg_abs_dif"].append(avg_abs_dif.tolist())
+                        data[key]["neg_support"].append(neg_support.tolist())
+                        data[key]["pos_support"].append(pos_support.tolist())
                     data[key]["predictor_acc"].append(predictor_acc)
 
                 with open(file_name, 'w', encoding='utf-8') as f:

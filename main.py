@@ -203,19 +203,20 @@ if __name__ == "__main__":
     input_dim = next(iter(dataloader_train))[0].shape[1]
     protected_dim = next(iter(dataloader_train))[2].shape[1]
     output_dim = next(iter(dataloader_train))[1].shape[1]
-
+    equality_of_odds = True
     # Check whether to run experiment for UCI Adult or UTKFace dataset
     if args.dataset == 'images':
 
         # Initialize the image predictor CNN
         predictor = ImagePredictor(input_dim, output_dim).to(device)
+        equality_of_odds = False
         pytorch_total_params = sum(p.numel() for p in predictor.parameters() if p.requires_grad)
         logger.info(f'Number of trainable parameters: {pytorch_total_params}')
     else:
         # Initialize models (for toy data the adversary is also logistic regression)
         predictor = Predictor(input_dim).to(device)
 
-    adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim).to(device) if args.debias else None
+    adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim, equality_of_odds=equality_of_odds).to(device) if args.debias else None
 
     # Initialize optimizers
     optimizer_P = torch.optim.Adam(predictor.parameters(), lr=args.predictor_lr)
