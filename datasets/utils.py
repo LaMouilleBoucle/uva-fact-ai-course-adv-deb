@@ -3,6 +3,7 @@ import os
 import torch
 import gdown
 import tarfile
+import pickle
 
 from torch.utils.data import DataLoader, Subset
 from sklearn.preprocessing import MaxAbsScaler
@@ -37,7 +38,10 @@ def get_utkface_dataloaders(base_path, batch_size):
                                                                  len(data) - math.ceil(len(data) * 0.6)])
     test_data, val_data = torch.utils.data.random_split(test_data, [math.ceil(len(test_data) * 0.5),
                                                                     len(test_data) - math.ceil(len(test_data) * 0.5)])
-
+    for no, data in enumerate(['train_data.pkl', 'val_data.pkl', 'test_data.pkl']):
+        with open(data, 'wb') as file:
+            pickle.dump([train_data.indices, val_data.indices, test_data.indices][no], file)
+    
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
