@@ -66,7 +66,7 @@ optional arguments:
   --alpha ALPHA         Value of alpha for the adversarial training
 ```
 
-Some of the arguments listed above might be irrelevant for some experimental set-ups or inappropriate for some data. Below you will find commands for running an experiment withe the default settings on a specific dataset, including arguments specific to it. Commands for reproducing the results presented in the notebook are also provided.
+Some of the arguments listed above might be irrelevant for some experimental set-ups or inappropriate for some data. Below you will find commands for running an experiment with the default settings on a specific dataset, including arguments specific to it. Commands for reproducing the results presented in the notebook are also provided.
 
 #### UCI Adult dataset
 The UCI adult dataset is the default data for doing the debiasing experiments. To train and test without debiasing, run:
