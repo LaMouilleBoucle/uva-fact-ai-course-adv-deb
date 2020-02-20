@@ -22,7 +22,7 @@ cd AdversarialDebiasing
 Then create and activate the environment necessary for running the experiments, using the following commands:
 ```bash
 conda env create -f environment.yml
-conda activate fact2020vlan
+conda activate advdebias
 ```
 
 To deactivate the environment, use:
