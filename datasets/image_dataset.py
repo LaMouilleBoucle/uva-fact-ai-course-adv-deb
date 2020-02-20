@@ -10,14 +10,14 @@ from torchvision import transforms
 
 class UTKFace(Dataset):
     """
-    UTKFace dataset from https://susanqq.github.io/UTKFace/. 
-    Pre-processing of the data includes resizing of images, and binning and binarization of age. 
+    UTKFace dataset from https://susanqq.github.io/UTKFace/.
+    Pre-processing of the data includes resizing of images, and binning and binarization of age.
     The protected variable is sex.
 
 
     Args:
         directory (list of str): File path to the folder containing images
-        protected_vars (list): list of strings of protected variable names  
+        protected_vars (list): list of strings of protected variable names
     """
 
     def __init__(self, directory, protected_vars):
@@ -25,7 +25,7 @@ class UTKFace(Dataset):
         self.vars = {'sex': [], 'race': []}
         self.labels = []
         self.protected_var_names = protected_vars
-        
+
         # We resize the input from 200x200 to 100x100
         self.transform = transforms.Compose([transforms.Resize(100), transforms.ToTensor()])
         skipped = 0
@@ -45,7 +45,6 @@ class UTKFace(Dataset):
 
         _, self.labels = self.one_hot_encode(pd.cut(self.labels,
                                                     bins=[0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 120],
-                                                    # labels=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65],
                                                     right=True))
 
         self.labels = torch.tensor(self.labels).float()
