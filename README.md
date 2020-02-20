@@ -47,18 +47,18 @@ usage: main.py [-h] [--n_epochs N_EPOCHS] [--batch_size BATCH_SIZE]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --n_epochs N_EPOCHS   number of epochs
+  --n_epochs N_EPOCHS   Number of epochs
   --batch_size BATCH_SIZE
-                        batch size
+                        Batch size
   --predictor_lr PREDICTOR_LR
-                        predictor learning rate
+                        Predictor learning rate
   --adversary_lr ADVERSARY_LR
-                        adversary learning rate
-  --debias              Use the adversarial network to mitigate unwanted bias
-  --val                 Use a validation set during training
+                        Adversary learning rate
+  --debias              Whether to perform debiasing or not
+  --val                 Whether to use a validation set during training
   --dataset_name DATASET_NAME
-                        Tabular dataset to be used: adult, crime, images
-  --seed SEED           Train with a fixed seed
+                        Name of the dataset to be used: adult, crime, images
+  --seed SEED           Fixed seed to train with
   --save_model_to SAVE_MODEL_TO
                         Output path for saved model
   --lr_scheduler {exp,lambda}
