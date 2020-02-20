@@ -1,7 +1,6 @@
-### FACT in AI, University of Amsterdam 2020
+### Adversarial Debiasing
 
-Fairness, Accountability, Confidentiality and Fairness in AI is a master's course at the UvA.
-In the context thereof an attempt is made at reproducing a paper on fairness, namely
+In the context of the course FACT in AI an attempt is made at reproducing a paper on fairness, namely
 Mitigating Unwanted Biases with Adversarial Learning ([Zhang et al., 2018](https://arxiv.org/abs/1801.07593)). This is an in-processing method for the mitigation of unwanted biases in learning algorithms and is applicable to both continuous and discrete domains.
 
 This repository contains code for running the experiment from the paper on the UCI Adult dataset,
