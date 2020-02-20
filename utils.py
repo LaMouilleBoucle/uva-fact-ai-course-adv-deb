@@ -487,8 +487,10 @@ def entropy(rv1, cond_rv=None):
     conditional random variable is given.
 
     Args:
-        rv1 (list): List of samples from a random variable
-        cond_rv (list): List of samples from a random variable
+        rv1 (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable rv1
+        cond_rv (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable cond_rv
 
     Returns: Entropy or conditional entropy
     """
@@ -518,8 +520,10 @@ def get_joint(rv1, rv2):
     Gets all pairs of samples from the random variables that occur together.
 
     Args:
-        rv1 (list): List of samples from a random variable
-        rv2 (list): List of samples from a random variable
+        rv1 (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable rv1
+        rv2 (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable rv2
 
     Returns: List of tuples of all samples in rv1 and rv2 occurring together
     """
@@ -531,7 +535,8 @@ def get_distr(rv):
     Calculates probabilities of the random variable rv.
 
     Args:
-        rv (list): List of samples from a random variable
+        rv (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable rv
 
     Returns: Dictionary of probabilities where the keys are the events of rv
     """
@@ -547,8 +552,10 @@ def get_conditional_distr(rv, cond_rv):
     given another random variable cond_rv.
 
     Args:
-        rv (list): List of samples from a random variable
-        cond_rv (list): List of samples from a random variable
+        rv (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable rv
+        cond_rv (list): List where every element i corresponds to the mapping of outcome i 
+                into the image of random variable cond_rv
 
     Returns: Dictionary of conditional probabilities where the first keys
         are events of the conditional random variable and the second keys are
@@ -575,9 +582,12 @@ def mutual_information(rv1, rv2, cond_rv=None):
     conditioned on another random variable cond_rv if given.
 
     Args:
-        rv1 (list): List of samples from a random variable
-        rv2 (list): List of samples from a random variable
-        cond_rv (list): List of samples from a random variable
+        rv1 (list): List where every element i corresponds to the mapping of outcome i 
+            into the image of random variable rv1
+        rv2 (list): List where every element i corresponds to the mapping of outcome i 
+            into the image of random variable rv2
+        cond_rv (list): List where every element i corresponds to the mapping of outcome i 
+            into the image of random variable cond_rv
 
     Returns: Mutual information
     """
