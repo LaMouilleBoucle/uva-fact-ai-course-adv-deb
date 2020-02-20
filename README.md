@@ -99,7 +99,7 @@ python main.py --dataset_name crime --debias --batch_size 64 --predictor_lr 0.00
 ```
 
 #### UTKFace dataset
-The UTKFace set is not present in the data folder of this repository. The data is downloaded and placed into the right local folder when experimenting with it for the first time. To train, validate and test on the UTK Face dataset, run:
+The UTKFace set is not present in the data folder of this directory. The data is downloaded and placed into the right local folder when experimenting with it for the first time. To train, validate and test on the UTK Face dataset, run:
 
 ```bash
 python main.py --dataset_name images --val
