@@ -66,14 +66,14 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
         # Store average training losses of predictor after every epoch
         av_train_losses_P.append(np.mean(train_losses_P))
 
-        # Store train accuracy of predictor after every epoch
+        # Store train metrics of predictor after every epoch
         train_score_P = metric(labels_train_dict['true'], labels_train_dict['pred'])
         logger.info('Epoch {}/{}: predictor loss [train] = {:.3f}, '
                     'predictor score [train] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(train_losses_P),
                                                               train_score_P))
         train_scores_P.append(train_score_P)
 
-        # Store train accuracy of adversary after every epoch, if applicable
+        # Store train metrics of adversary after every epoch, if applicable
         if config.debias:
             av_train_losses_A.append(np.mean(train_losses_A))
             train_score_A = metric(protected_train_dict['true'], protected_train_dict['pred'])
@@ -99,12 +99,13 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
             # Store average validation losses of predictor after every epoch
             av_val_losses_P.append(np.mean(val_losses_P))
 
-            # Store train accuracy of predictor after every epoch
+            # Store validation metrics of predictor
             val_score_P = metric(labels_val_dict['true'], labels_val_dict['pred'])
             logger.info('Epoch {}/{}: predictor loss [val] = {:.3f}, '
                         'predictor score [val] = {:.3f}'.format(epoch + 1, config.n_epochs, np.mean(val_losses_P),
                                                                 val_score_P))
 
+            # Store validation metrics of adversary, if applicable
             if config.debias:
                 val_score_A = metric(protected_val_dict['true'], protected_val_dict['pred'])
                 logger.info('Epoch {}/{}: adversary loss [val] = {:.3f}, '
@@ -113,7 +114,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
 
     logger.info('Finished training')
 
-    # Plot accuracy and loss curves
+    # Plot scores and loss curves
     logger.info('Generating plots')
     utils.plot_learning_curves((av_train_losses_P, train_scores_P, av_val_losses_P, val_scores_P),
                                (av_train_losses_A, train_scores_A, av_val_losses_A, val_scores_A),
@@ -121,6 +122,7 @@ def train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion, m
     if config.dataset_name == 'crime' and config.val:
         utils.make_coplot(protected_val_dict, labels_val_dict)
 
+    # Save the model
     os.makedirs(config.save_model_to, exist_ok=True)
     torch.save(predictor.state_dict(),
                config.save_model_to + "pred_debiased_" + str(config.debias) + "_" + str(config.dataset_name) + "_seed_" + str(
@@ -146,22 +148,27 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, datas
     Returns: Results on the test set
 
     """
+    # Disable logging if show_logs is False
     if not show_logs:
         logging.disable(sys.maxsize)
 
+    # Forward pass on the test set
     with torch.no_grad():
         test_losses_P, test_losses_A, labels_test_dict, protected_test_dict, pred_y_prob = utils.forward_full(dataloader_test,
                                                                                                               predictor, adversary, criterion, device, dataset_name)
         if dataset_name != 'crime':
             mutual_info = utils.mutual_information(protected_test_dict["true"], labels_test_dict['pred'], labels_test_dict['true'])
 
+    # Compute the test metric with the predictor output
     test_score_P = metric(labels_test_dict['true'], labels_test_dict['pred'])
     logger.info('Predictor score [test] = {}'.format(test_score_P))
 
+    # Compute the test metric with the adversary output
     if adversary is not None:
         test_score_A = metric(protected_test_dict['true'], protected_test_dict['pred'])
         logger.info('Adversary score [test] = {}'.format(test_score_A))
 
+    # Compute additional metrics depending on the dataset
     if dataset_name == 'adult':
         neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr = utils.calculate_metrics(
             labels_test_dict['true'], labels_test_dict['pred'], protected_test_dict['true'], dataset_name)
@@ -187,24 +194,25 @@ def test(dataloader_test, predictor, adversary, criterion, metric, device, datas
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
 
+    # Define arguments
+    parser = argparse.ArgumentParser()
     parser.add_argument('--n_epochs', type=int, default=100,
-                        help='number of epochs')
+                        help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32,
-                        help='batch size')
+                        help='Batch size')
     parser.add_argument('--predictor_lr', type=float, default=0.001,
-                        help='predictor learning rate')
+                        help='Predictor learning rate')
     parser.add_argument('--adversary_lr', type=float, default=0.001,
-                        help='adversary learning rate')
+                        help='Adversary learning rate')
     parser.add_argument('--debias', action='store_true',
-                        help='Use the adversarial network to mitigate unwanted bias')
+                        help='Whether to perform debiasing or not')
     parser.add_argument('--val', action="store_true",
-                        help='Use a validation set during training')
+                        help='Whether to use a validation set during training')
     parser.add_argument('--dataset_name', type=str, default='adult',
-                        help='Tabular dataset to be used: adult, crime, images')
+                        help='Name of the dataset to be used: adult, crime, images')
     parser.add_argument('--seed', type=int, default=None,
-                        help='Train with a fixed seed')
+                        help='Fixed seed to train with')
     parser.add_argument('--save_model_to', type=str, default="saved_models/",
                         help='Output path for saved model')
     parser.add_argument('--lr_scheduler', choices=['exp', 'lambda'], default='exp',
@@ -212,6 +220,7 @@ if __name__ == "__main__":
     parser.add_argument('--alpha', type=float, default=0.3,
                         help='Value of alpha for the adversarial training')
 
+    # Parse arguments
     args = parser.parse_args()
 
     # Display the configuration
@@ -232,10 +241,12 @@ if __name__ == "__main__":
     logger.info('Loading the dataset')
     dataloader_train, dataloader_val, dataloader_test = datasets.utils.get_dataloaders(args.batch_size, args.dataset_name)
 
-    # Get feature dimension of data
+    # Get dimensions of the data
     input_dim = next(iter(dataloader_train))[0].shape[1]
     protected_dim = next(iter(dataloader_train))[2].shape[1]
     output_dim = next(iter(dataloader_train))[1].shape[1]
+
+    # Fairness method
     equality_of_odds = True
 
     # Initialize the predictor based on the dataset
@@ -247,6 +258,7 @@ if __name__ == "__main__":
     else:
         predictor = Predictor(input_dim).to(device)
 
+    # Initialize the adversary
     adversary = Adversary(input_dim=output_dim, protected_dim=protected_dim, equality_of_odds=equality_of_odds).to(device) if args.debias else None
 
     # Initialize optimizers
@@ -268,9 +280,9 @@ if __name__ == "__main__":
         criterion = nn.BCELoss()
         metric = accuracy_score
 
-    # Train the models
+    # Train the model
     train(dataloader_train, dataloader_val, predictor, optimizer_P, criterion,
             metric, adversary, optimizer_A, scheduler, args.alpha, device, args)
 
-    # Test the models
+    # Test the model
     test(dataloader_test, predictor, adversary, criterion, metric, device, args.dataset_name)
