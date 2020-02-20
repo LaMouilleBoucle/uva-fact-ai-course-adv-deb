@@ -111,10 +111,10 @@ python main.py --dataset_name images --batch_size 128 --debias --predictor_lr 0.
 ```
 
 ### Authors
-- Vanessa Botha, *10754954* - vanessa.botha@student.uva.nl
-- Nithin Holla, *12166804* - nithin.holla@student.uva.nl
-- Azamat Omuraliev, *12057398* - azamat.omuraiev@student.uva.nl
-- Leila Talha, *10756922* - leila.talha@student.uva.nl
+- [Vanessa Botha](https://github.com/VanessaBotha) - vanessa.botha@student.uva.nl
+- [Nithin Holla](https://github.com/Nithin-Holla) - nithin.holla@student.uva.nl
+- [Azamat Omuraliev](https://github.com/azamatomu) - azamat.omuraiev@student.uva.nl
+- [Leila Talha](https://github.com/LaMouilleBoucle) - leila.talha@student.uva.nl
 
 ### Acknowledgements
 We would like to express great appreciation to IBM for releasing the [AI Fairness 360 toolkit](https://github.com/IBM/AIF360) that has been of inspiration to us, when parameter settings required to reproduce results were not mentioned by Zhang and colleagues. In addition we are grateful for the datasets made publicly available by UCI and [susanqq](https://github.com/susanqq). Finally we would like to thank Leon Lang for providing us with advice and feedback and for swiftly responding to our e-mails, answering our questios.
