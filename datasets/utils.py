@@ -13,7 +13,7 @@ from datasets.communities_crime_dataset import CommunitiesCrimeDataset
 from datasets.image_dataset import UTKFace
 
 
-def get_utkface_dataloaders(base_path, batch_size, test_indices=None):
+def get_utkface_dataloaders(base_path, batch_size):
     """
     Retrieves the train, validation and test dataloaders for the UTKFace dataset.
 
@@ -34,19 +34,20 @@ def get_utkface_dataloaders(base_path, batch_size, test_indices=None):
             tar_ref.extractall(os.path.join(base_path, 'data'))
 
     data = UTKFace(data_path, protected_vars=['sex'])
+
+    # Split data into train, validation and test set with 60/20/20 ratio
     train_data, test_data = torch.utils.data.random_split(data, [math.ceil(len(data) * 0.6),
                                                                  len(data) - math.ceil(len(data) * 0.6)])
+
     test_data, val_data = torch.utils.data.random_split(test_data, [math.ceil(len(test_data) * 0.5),
                                                                     len(test_data) - math.ceil(len(test_data) * 0.5)])
+
     for no, data in enumerate(['train_data.pkl', 'val_data.pkl', 'test_data.pkl']):
         with open(data, 'wb') as file:
             pickle.dump([train_data.indices, val_data.indices, test_data.indices][no], file)
-    
+
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
-    if test_indices is None:
-        test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
-    else:
-        test_loader = DataLoader(Subset(data, test_indices), batch_size=batch_size, shuffle=False, num_workers=2)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
     return train_loader, val_loader, test_loader
@@ -63,6 +64,8 @@ def load_communities_crime_dataset(base_path, batch_size):
     Returns: (train dataloder, test dataloader)
     """
     cc_dataset = CommunitiesCrimeDataset(os.path.join(base_path,'data/'))
+
+    # Split data into train, validation and test set with 60/20/20 ratio
     end_of_train = int(0.6 * len(cc_dataset))
     end_of_val = end_of_train + int(0.2 * len(cc_dataset))
     train_dataset = Subset(cc_dataset, range(0, end_of_train))
@@ -89,6 +92,8 @@ def load_adult_dataset(base_path, batch_size):
     train_path = os.path.join(base_path, 'data/adult.data')
     test_path = os.path.join(base_path, 'data/adult.test')
     adult_dataset = AdultUCI([train_path, test_path])
+
+    # Split data into train and test set with 60/30 ratio
     end_of_train = int(0.7 * len(adult_dataset))
     min_max_scaler = MaxAbsScaler()
     adult_dataset.data[:end_of_train] = torch.tensor(min_max_scaler.fit_transform(adult_dataset.data[:end_of_train].numpy()))

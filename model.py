@@ -36,24 +36,18 @@ class ImagePredictor(nn.Module):
         self.drop_probability = drop_prob
         self.convolutions = nn.Sequential(
             nn.Conv2d(self.input_dim, 6, kernel_size=(3, 3), stride=1, padding=0),
-            # input_dim * 100 * 100 -> 6 * 98 * 98
             nn.BatchNorm2d(6),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3, 3), stride=2, padding=0),
-            # 6 * 98 * 98 -> 6 * 48 * 48
             nn.Conv2d(6, 12, kernel_size=(3, 3), stride=1, padding=0),
-            # 6 * 48 * 48 -> 12 * 46 * 46
             nn.BatchNorm2d(12),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3, 3), stride=2, padding=0),
-            # 12 * 46 * 46 -> 12 * 22 * 22
             nn.Dropout(drop_prob),
             nn.Conv2d(12, 24, kernel_size=(3, 3), stride=1, padding=0),
-            # 12 * 22 * 22 -> 24 * 20 * 20
             nn.BatchNorm2d(24),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(3, 3), stride=2, padding=0),
-            # 24 * 20 * 20 -> 24 * 9 * 9
             nn.Dropout(drop_prob))
         self.linears = nn.Sequential(
             nn.Linear(24 * 9 * 9, 128),
@@ -79,7 +73,7 @@ class Adversary(nn.Module):
     def __init__(self, input_dim, protected_dim, equality_of_odds=True):
         super(Adversary, self).__init__()
         self.c = nn.Parameter(torch.ones(1 * protected_dim))
-        if equality_of_odds: 
+        if equality_of_odds:
             self.no_targets = 3
         else:
             self.no_targets = 1
