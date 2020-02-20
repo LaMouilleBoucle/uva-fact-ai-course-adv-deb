@@ -1,4 +1,4 @@
-name: fact2020vlan
+name: advdebias
 channels:
   - defaults
   - pytorch
