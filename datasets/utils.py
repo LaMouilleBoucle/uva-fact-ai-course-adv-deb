@@ -45,11 +45,10 @@ def get_utkface_dataloaders(base_path, batch_size):
     for no, data in enumerate(['train_data.pkl', 'val_data.pkl', 'test_data.pkl']):
         with open(data, 'wb') as file:
             pickle.dump([train_data.indices, val_data.indices, test_data.indices][no], file)
-    
 
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
+	train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, num_workers=2)
 	test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
-    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
+	val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
     return train_loader, val_loader, test_loader
 
@@ -73,9 +72,9 @@ def load_communities_crime_dataset(base_path, batch_size):
     val_dataset = Subset(cc_dataset, range(end_of_train, end_of_val))
     test_dataset = Subset(cc_dataset, range(end_of_val, len(cc_dataset)))
 
-    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size, shuffle=True)
+	train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+	val_loader = DataLoader(val_dataset, batch_size, shuffle=True)
+	test_loader = DataLoader(test_dataset, batch_size, shuffle=True)
 
     return train_loader, val_loader, test_loader
 
