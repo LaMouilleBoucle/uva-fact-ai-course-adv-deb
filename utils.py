@@ -65,6 +65,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset_na
         loss_P = criterion(pred_y_prob, true_y_label)
         losses_P.append(loss_P.item())
 
+        # Store the true labels and the predictions
         if dataset_name == 'images':
             labels_dict['true'].extend(torch.max(true_y_label, dim=1)[1].cpu().numpy().tolist())
             labels_dict['pred'].extend(torch.max(pred_y_prob, dim=1)[1].cpu().numpy().tolist())
@@ -96,7 +97,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset_na
                 # Reset gradients of adversary and predictor
                 optimizer_A.zero_grad()
                 optimizer_P.zero_grad()
-                # Compute gradients adversary loss
+                # Compute gradients of adversary loss
                 loss_A.backward(retain_graph=True)
                 # Concatenate gradients of adversary loss with respect to the predictor
                 grad_w_La = concat_grad(predictor)
@@ -125,7 +126,7 @@ def forward_full(dataloader, predictor, adversary, criterion, device, dataset_na
                 if decayer.step_count % 1000 == 0:
                     scheduler.step()
 
-                # Update adversary params
+                # Update adversary weights
                 optimizer_A.step()
 
     if train:
@@ -219,13 +220,15 @@ def calculate_fnr(fn, tp):
 
 def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_probs=None):
     """
-    Calculate reporting metrics per experiment.
+    Calculate metrics for reporting
+
     Args:
-        true_labels (list)
-        predictions (list)
-        true_protected (list)
-        dataset (str)
-        pred_probs (list)
+        true_labels (list): True labels
+        predictions (list): Predictions from the model
+        true_protected (list): True values of the protected variable
+        dataset (str): Name of the dataset
+        pred_probs (list): Prediction probability estimates
+
     Returns:
         Set of FPR, FNR metrics and confusion matrix for UCI Adult dataset
         OR
@@ -250,16 +253,17 @@ def calculate_metrics(true_labels, predictions, true_protected, dataset, pred_pr
         pos_fnr = calculate_fnr(fn, tp)
 
         return neg_confusion_mat, neg_fpr, neg_fnr, pos_confusion_mat, pos_fpr, pos_fnr
+
     elif dataset == 'images':
-
         # 0 is male, so negative = male; positive = female
-
         neg_conditionals = conditional_matrix(neg_confusion_mat)
         pos_conditionals = conditional_matrix(pos_confusion_mat)
         protected_differences = neg_conditionals - pos_conditionals
-        # difference between conditionals measures the degree to which equality of odds is satisfied
+
+        # Difference between conditionals measures the degree to which equality of odds is satisfied
         avg_dif = np.average(protected_differences, axis=1)
         avg_abs_dif = np.average(np.absolute(protected_differences), axis=1)
+
         neg_prec, neg_recall, neg_fscore, neg_support = precision_recall_fscore_support(true_labels[negative_indices],
                                                                                         predictions[negative_indices])
         pos_prec, pos_recall, pos_fscore, pos_support = precision_recall_fscore_support(true_labels[positive_indices],
@@ -281,8 +285,7 @@ def conditional_matrix(confusion_matrix):
     Args:
         confusion_matrix(np.array), where y axis = true label, x axis = pred label
 
-    Returns:
-        conditional_matrix (np.array)
+    Returns: conditional_matrix (np.array)
     """
     normalization = np.expand_dims(np.sum(confusion_matrix, axis=1), axis=1)
     conditional_matrix = np.divide(confusion_matrix, normalization)
@@ -290,6 +293,17 @@ def conditional_matrix(confusion_matrix):
 
 
 def plot_learning_curves(P, A, dataset='adult'):
+    """
+    Plots the learning curves
+
+    Args:
+        P (list of lists): Contains the train losses, train scores, validation losses and validation scores for the predictor
+        A (list of lists): Contains the train losses, train scores, validation losses and validation scores for the adversary
+        dataset (str): Name of the dataset
+
+    Returns: None
+
+    """
     if dataset == 'crime':
         metric = 'MSE'
     else:
@@ -333,6 +347,17 @@ def plot_learning_curves(P, A, dataset='adult'):
 
 
 def make_coplot(protected_dict, labels_dict):
+    """
+    Produces a conditional plot in which predictions are conditioned on the
+    targets of the data samples. The samples are grouped into five consecutive
+    bins, based on their values for the protected variable.
+
+    Args:
+        protected_dict (dict): Predicted and true values of protected variable
+        labels_dict (dict): Predicted and true labels
+
+    Returns: None
+    """
     plt.figure()
 
     ratios = np.array(protected_dict['true'])
@@ -367,16 +392,17 @@ def make_coplot(protected_dict, labels_dict):
 
 def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, pos_fnr_db, neg_fpr_db, pos_fpr_db):
     """ 
-    Plots the FNR and FPR rates for male and female in the biased and debiased setting 
+    Plots FNR and FPR for male and female in the biased and debiased setting
+
     Args:
-        neg_fnr_b (list): list of fnr for female in the biased setting
-        pos_fnr_b (list): list of fnr for male in the biased setting
-        neg_fpr_b (list): list of fpr for female in the biased setting
-        pos_fpr_b (list): list of fpr for male in the biased setting
-        neg_fnr_db (list): list of fnr for female in the debiased setting
-        pos_fnr_db (list): list of fnr for male in the debiased setting
-        neg_fpr_db (list): list of fpr for female in the debiased setting
-        pos_fpr_db (list): list of fpr for male in the debiased setting
+        neg_fnr_b (list): List of fnr for female in the biased setting
+        pos_fnr_b (list): List of fnr for male in the biased setting
+        neg_fpr_b (list): List of fpr for female in the biased setting
+        pos_fpr_b (list): List of fpr for male in the biased setting
+        neg_fnr_db (list): List of fnr for female in the debiased setting
+        pos_fnr_db (list): List of fnr for male in the debiased setting
+        neg_fpr_db (list): List of fpr for female in the debiased setting
+        pos_fpr_db (list): List of fpr for male in the debiased setting
 
     Returns: None
     """
@@ -399,7 +425,7 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
     women_std_fnr = (np.std(neg_fnr_b), np.std(neg_fnr_db))
     men_std_fnr = (np.std(pos_fnr_b), np.std(pos_fnr_db))
 
-    # Plot standard deviations if mulitple results available
+    # Plot standard deviations if multiple results are available
     if len(neg_fnr_b) > 1:
         axs[0].bar(r1, women_mean_fnr, color='#FF00B2', width=bar_width, yerr=women_std_fnr, 
                     error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
@@ -413,7 +439,7 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
         
         
     
-    # Plot FNR results Zhang et al
+    # Plot FNR results from Zhang et al
     axs[0].plot([r1[0]-0.5*bar_width +0.005, r1[0]+0.5*bar_width], [0.4492, 0.4492], "k:", lw=2, label="Zhang et al. (2018)")
     axs[0].plot([r1[1]-0.5*bar_width +0.005, r1[1]+0.5*bar_width], [0.4458, 0.4458], "k:", lw=2)
     axs[0].plot([r2[0]-0.5*bar_width +0.005, r2[0]+0.5*bar_width], [0.3667, 0.3667], "k:", lw=2)
@@ -424,13 +450,13 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
     axs[0].set_xticklabels(['Without debias', 'With debias'], fontsize=12)
     axs[0].set_ylabel('Rate', fontsize=12)
 
-    # plot results FPR
+    # Plot results FPR
     women_mean_fpr = (np.mean(neg_fpr_b), np.mean(neg_fpr_db))
     men_mean_fpr = (np.mean(pos_fpr_b), np.mean(pos_fpr_db))
     women_std_fpr = (np.std(neg_fpr_b), np.std(neg_fpr_db))
     men_std_fpr = (np.std(pos_fpr_b), np.std(pos_fpr_db))
 
-    # Plot standard deviations if mulitple results available
+    # Plot standard deviations if multiple results are available
     if len(neg_fnr_b) > 1: 
         axs[1].bar(r1, women_mean_fpr, color='#FF00B2', width=bar_width, yerr=women_std_fpr, 
                     error_kw=dict(lw=0.7, capsize=4, capthick=0.7, ecolor="#505050"), 
@@ -442,7 +468,7 @@ def plot_adult_results(neg_fnr_b, pos_fnr_b, neg_fpr_b, pos_fpr_b, neg_fnr_db, p
         axs[1].bar(r1, women_mean_fpr, color='#FF00B2', width=bar_width, edgecolor='white', label='Female')
         axs[1].bar(r2, men_mean_fpr, color='#0097FF', width=bar_width, yerr=men_std_fpr, edgecolor='white', label='Male')
 
-    # Plot FPR results Zhang et al
+    # Plot FPR results from Zhang et al
     axs[1].plot([r1[0]-0.5*bar_width +0.005, r1[0]+0.5*bar_width], [0.0248, 0.0248],"k:", lw=2, label="Zhang et al.")
     axs[1].plot([r1[1]-0.5*bar_width +0.005, r1[1]+0.5*bar_width], [0.0647, 0.0647], "k:", lw=2)
     axs[1].plot([r2[0]-0.5*bar_width +0.005, r2[0]+0.5*bar_width], [0.0917, 0.0917], "k:", lw=2)
@@ -464,7 +490,7 @@ def entropy(rv1, cond_rv=None):
         rv1 (list): List of samples from a random variable
         cond_rv (list): List of samples from a random variable
 
-    Returns: (conditional) entropy
+    Returns: Entropy or conditional entropy
     """
 
     entropy = 0
@@ -495,24 +521,23 @@ def get_joint(rv1, rv2):
         rv1 (list): List of samples from a random variable
         rv2 (list): List of samples from a random variable
 
-    Returns: list of tuples of all samples in rv1 and rv2 occurring together
+    Returns: List of tuples of all samples in rv1 and rv2 occurring together
     """
     return [i for i in zip(rv1, rv2)]
 
 
 def get_distr(rv):
     """
-    Calculates probabilties of the random variable rv.
+    Calculates probabilities of the random variable rv.
 
     Args:
         rv (list): List of samples from a random variable
 
-    Returns: dictionary of probabilties where the keys are the events of rv
+    Returns: Dictionary of probabilities where the keys are the events of rv
     """
     distr = {}
     for event, frequency in Counter(rv).items():
         distr[event] = frequency / len(rv)
-
     return distr
 
 
@@ -525,7 +550,7 @@ def get_conditional_distr(rv, cond_rv):
         rv (list): List of samples from a random variable
         cond_rv (list): List of samples from a random variable
 
-    Returns: dictionary of conditional probabilities where the first keys
+    Returns: Dictionary of conditional probabilities where the first keys
         are events of the conditional random variable and the second keys are
         events of the random variable
     """
@@ -536,7 +561,7 @@ def get_conditional_distr(rv, cond_rv):
     # Get distribution of random variable we want to condition on
     distr_cond_rv = get_distr(cond_rv)
 
-    # Get distribution of random variable given conditional random variable by Bayes rule
+    # Get distribution of random variable given conditional random variable by Bayes' rule
     conditional_distr = defaultdict(lambda: {})
     for event, joint_prob in distr_joint.items():
         conditional_distr[event[1]][event[0]] = joint_prob / distr_cond_rv[event[1]]
@@ -554,7 +579,7 @@ def mutual_information(rv1, rv2, cond_rv=None):
         rv2 (list): List of samples from a random variable
         cond_rv (list): List of samples from a random variable
 
-    Returns: mutual information
+    Returns: Mutual information
     """
 
     mutual_information = None
